@@ -100,4 +100,3 @@ def get_bin_history(bin_id: str, limit: int = 20, db: Session = Depends(get_db))
 @app.get("/health")
 def health():
     return {"status": "running"}
-

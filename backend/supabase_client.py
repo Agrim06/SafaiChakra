@@ -1,7 +1,7 @@
 from supabase import create_client
-from dotenv import load_dotenv
+import os
 
-url = "DATABASE_URL"
-key = ANON_KEY
+url = os.getenv("DATABASE_URL")
+key = os.getenv("ANON_KEY")
 
 supabase = create_client(url, key)
