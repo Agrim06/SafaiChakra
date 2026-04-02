@@ -2,175 +2,210 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 
-// ───────── CONFIG ─────────
-const char *WIFI_SSID = "ERROR_net";
-const char *WIFI_PASSWORD = "korou1121.,.,";
+// ── WiFi + Server Config ────────────────────────────────
+const char *WIFI_SSID = "SSIID";
+const char *WIFI_PASSWORD = "Password";
+const char *SERVER_URL = "http://10.66.247.81:8000/bin/update";
 
-// ⚠️ Replace with your laptop IP
-const char *SERVER_URL = "http://192.168.1.100:8000/bin/update";
-
+// ── Bin Config ──────────────────────────────────────────
 const char *BIN_ID = "BIN_01";
-const char *BIN_TYPE = "dry"; // change to "wet" if needed
+float BIN_HEIGHT_CM = 40.0; // Dynamic after calibration
 
-// ───────── PINS ─────────
-#define TRIG D1
-#define ECHO D2
-#define BUTTON D3 // calibration button (optional)
+// ── Timing Config ───────────────────────────────────────
+const int READ_INTERVAL = 2000; // Read every 2 sec
+const int SEND_INTERVAL = 3000; // Send every 10 sec
 
-// ───────── VARIABLES ─────────
-float BIN_HEIGHT = 40.0; // will update after calibration
+// ── Pins ────────────────────────────────────────────────
+const int TRIG_PIN = D1;
+const int ECHO_PIN = D2;
+const int BUTTON_PIN = D3;
 
-// ───────── SETUP ─────────
+// ── Globals ─────────────────────────────────────────────
+WiFiClient wifiClient;
+
+unsigned long lastReadTime = 0;
+unsigned long lastSendTime = 0;
+
+float lastDist = 0;
+float lastFill = 0;
+float prevFill = 0;
+
+// ── Setup ───────────────────────────────────────────────
 void setup()
 {
     Serial.begin(115200);
 
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT);
-    pinMode(BUTTON, INPUT_PULLUP);
+    pinMode(TRIG_PIN, OUTPUT);
+    pinMode(ECHO_PIN, INPUT);
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
 
+    Serial.println("\nConnecting to WiFi...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    Serial.print("Connecting to WiFi");
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
         Serial.print(".");
     }
 
-    Serial.println("\nConnected!");
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
-
-    Serial.println("Press 'c' OR button to CALIBRATE when bin is EMPTY");
+    Serial.println("\nWiFi connected!");
+    Serial.println("Type 'cal' OR press button to calibrate");
 }
 
-// ───────── DISTANCE FUNCTION ─────────
-float getDistance()
+// ── Read Distance ───────────────────────────────────────
+float readDistanceCm()
 {
-    digitalWrite(TRIG, LOW);
+    digitalWrite(TRIG_PIN, LOW);
     delayMicroseconds(2);
 
-    digitalWrite(TRIG, HIGH);
+    digitalWrite(TRIG_PIN, HIGH);
     delayMicroseconds(10);
-    digitalWrite(TRIG, LOW);
+    digitalWrite(TRIG_PIN, LOW);
 
-    long duration = pulseIn(ECHO, HIGH, 30000);
-
+    long duration = pulseIn(ECHO_PIN, HIGH, 30000);
     if (duration == 0)
         return -1;
 
-    float distance = duration * 0.034 / 2;
-    return distance;
+    return (duration * 0.0343) / 2.0;
 }
 
-// ───────── CALIBRATION ─────────
+// ── Calibration ─────────────────────────────────────────
 void calibrateBin()
 {
-    Serial.println("\nCalibrating... Keep bin EMPTY!");
+    Serial.println("\nCalibrating... Keep bin EMPTY");
+    delay(2000);
 
     float sum = 0;
-    int count = 0;
+    int count = 5;
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < count; i++)
     {
-        float d = getDistance();
+        float d = readDistanceCm();
         if (d > 0)
         {
             sum += d;
-            count++;
+            Serial.println("Reading: " + String(d));
         }
-        delay(200);
+        delay(500);
     }
 
-    if (count > 0)
-    {
-        BIN_HEIGHT = sum / count;
+    float avg = sum / count;
 
-        Serial.print("Calibrated BIN HEIGHT: ");
-        Serial.print(BIN_HEIGHT);
-        Serial.println(" cm");
+    if (avg > 0)
+    {
+        BIN_HEIGHT_CM = avg;
+        Serial.println("New bin height: " + String(BIN_HEIGHT_CM) + " cm");
     }
     else
     {
-        Serial.println("Calibration failed!");
+        Serial.println("Calibration failed");
     }
 }
 
-// ───────── FILL CALCULATION ─────────
-float getFill(float distance)
+// ── Calculate Fill ──────────────────────────────────────
+float calcFillPercent(float distanceCm)
 {
-    if (distance < 0 || distance > BIN_HEIGHT)
-        return 0;
-
-    float fill = (1 - distance / BIN_HEIGHT) * 100;
-    return constrain(fill, 0, 100);
+    if (distanceCm < 0 || distanceCm > BIN_HEIGHT_CM)
+        return 0.0;
+    float fill = (1.0 - distanceCm / BIN_HEIGHT_CM) * 100.0;
+    return constrain(fill, 0.0, 100.0);
 }
 
-// ───────── SEND DATA ─────────
-void sendData(float fill, float distance)
+// ── Send Data ───────────────────────────────────────────
+void sendData(float fillPct, float distCm)
 {
     if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println(" WiFi disconnected");
         return;
+    }
 
-    WiFiClient client;
     HTTPClient http;
-
-    http.begin(client, SERVER_URL);
+    http.begin(wifiClient, SERVER_URL);
     http.addHeader("Content-Type", "application/json");
 
     StaticJsonDocument<256> doc;
-
     doc["bin_id"] = BIN_ID;
-    doc["fill_pct"] = round(fill * 10) / 10.0;
-    doc["distance_cm"] = round(distance * 10) / 10.0;
-    doc["bin_type"] = BIN_TYPE;
-    doc["timestamp"] = millis(); // uptime-based timestamp
+    doc["fill_pct"] = round(fillPct * 10) / 10.0;
+    doc["distance_cm"] = round(distCm * 10) / 10.0;
 
     String payload;
     serializeJson(doc, payload);
 
-    Serial.println("Sending: " + payload);
+    Serial.println("📡 Sending: " + payload);
 
-    int code = http.POST(payload);
+    int httpCode = http.POST(payload);
 
-    Serial.print("Response: ");
-    Serial.println(code);
+    if (httpCode > 0)
+    {
+        Serial.println(" Response: " + String(httpCode));
+    }
+    else
+    {
+        Serial.println(" POST failed: " + http.errorToString(httpCode));
+    }
 
     http.end();
 }
 
-// ───────── LOOP ─────────
-void loop()
+// ── Serial Commands ─────────────────────────────────────
+void handleSerial()
 {
-
-    // 🔧 SERIAL CALIBRATION
     if (Serial.available())
     {
-        char input = Serial.read();
-        if (input == 'c')
+        String input = Serial.readStringUntil('\n');
+        input.trim();
+
+        if (input == "cal")
         {
             calibrateBin();
         }
+        else if (input.startsWith("set "))
+        {
+            float val = input.substring(4).toFloat();
+            if (val > 0)
+            {
+                BIN_HEIGHT_CM = val;
+                Serial.println(" Height manually set: " + String(val));
+            }
+        }
     }
+}
 
-    // 🔧 BUTTON CALIBRATION
-    if (digitalRead(BUTTON) == LOW)
+// ── Main Loop ───────────────────────────────────────────
+void loop()
+{
+
+    unsigned long now = millis();
+
+    // 🔘 Button calibration
+    if (digitalRead(BUTTON_PIN) == LOW)
     {
-        delay(200); // debounce
         calibrateBin();
+        delay(2000); // debounce
     }
 
-    float distance = getDistance();
-    float fill = getFill(distance);
+    // 💻 Serial input
+    handleSerial();
 
-    Serial.print("Distance: ");
-    Serial.print(distance);
-    Serial.print(" cm | Fill: ");
-    Serial.print(fill);
-    Serial.println(" %");
+    // 📏 Read sensor frequently
+    if (now - lastReadTime >= READ_INTERVAL)
+    {
+        lastDist = readDistanceCm();
+        lastFill = calcFillPercent(lastDist);
 
-    sendData(fill, distance);
+        Serial.printf("📏 Distance: %.1f cm | Fill: %.1f%%\n", lastDist, lastFill);
 
-    delay(10000); // send every 10 sec
+        lastReadTime = now;
+    }
+
+    // 📡 Send only if time passed OR big change
+    if (now - lastSendTime >= SEND_INTERVAL || abs(lastFill - prevFill) > 5)
+    {
+
+        sendData(lastFill, lastDist);
+
+        prevFill = lastFill;
+        lastSendTime = now;
+    }
 }
