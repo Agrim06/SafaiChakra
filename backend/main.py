@@ -1,102 +1,73 @@
+"""
+main.py
+=======
+SafaiChakra FastAPI application entry point.
+
+Responsibilities:
+  - Create DB tables on startup
+  - Register routers
+  - Enable CORS
+  - Expose /health endpoint
+"""
+
+from __future__ import annotations
+
 import os
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+
 from dotenv import load_dotenv
-from database import get_db, engine
+
+# Load .env before anything else so that all modules pick up the vars
+load_dotenv()
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from database import engine
 import models
 
-load_dotenv()
-models.Base.metadata.create_all(bind=engine)
+from routers.bin_router   import router as bin_router
+from routers.route_router import router as route_router
 
-ALERT_THRESHOLD = float(os.getenv("ALERT_THRESHOLD", 70.0))
+# ── App factory ─────────────────────────────────────────────────────────────
 
-app = FastAPI(title="SafaiChakra API")
+app = FastAPI(
+    title       = "SafaiChakra API",
+    description = (
+        "Smart waste management backend. "
+        "Receives IoT bin readings, stores them in PostgreSQL, "
+        "and optimises collection routes with OR-Tools."
+    ),
+    version     = "1.0.0",
+    docs_url    = "/docs",
+    redoc_url   = "/redoc",
+)
+
+# ── CORS ─────────────────────────────────────────────────────────────────────
+# In production restrict allow_origins to your frontend domain.
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # restrict to your frontend URL in production
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins     = ALLOWED_ORIGINS,
+    allow_credentials = True,
+    allow_methods     = ["*"],
+    allow_headers     = ["*"],
 )
 
-# ── Pydantic schemas ──────────────────────────────────────
-class BinUpdateRequest(BaseModel):
-    bin_id:      str
-    fill_pct:    float
-    distance_cm: float = None
+# ── Database bootstrap ───────────────────────────────────────────────────────
+models.Base.metadata.create_all(bind=engine)
 
-class BinStatusResponse(BaseModel):
-    bin_id:     str
-    fill_pct:   float
-    is_alert:   bool
-    message:    str
-    created_at: str
+# ── Routers ──────────────────────────────────────────────────────────────────
+app.include_router(bin_router)
+app.include_router(route_router)
 
-# ── POST /bin/update ──────────────────────────────────────
-@app.post("/bin/update")
-def update_bin(payload: BinUpdateRequest, db: Session = Depends(get_db)):
-    is_alert = payload.fill_pct >= ALERT_THRESHOLD
+# ── Health / root ─────────────────────────────────────────────────────────────
+@app.get("/", tags=["Meta"])
+def root():
+    return {"project": "SafaiChakra", "status": "running", "docs": "/docs"}
 
-    reading = models.BinReading(
-        bin_id      = payload.bin_id,
-        fill_pct    = payload.fill_pct,
-        distance_cm = payload.distance_cm,
-        is_alert    = is_alert,
-    )
-    db.add(reading)
-    db.commit()
-    db.refresh(reading)
 
-    return {
-        "status":   "ok",
-        "bin_id":   reading.bin_id,
-        "fill_pct": reading.fill_pct,
-        "is_alert": reading.is_alert,
-        "id":       reading.id,
-    }
-
-# ── GET /bin/status ───────────────────────────────────────
-@app.get("/bin/status/{bin_id}")
-def get_bin_status(bin_id: str, db: Session = Depends(get_db)):
-    reading = (
-        db.query(models.BinReading)
-        .filter(models.BinReading.bin_id == bin_id)
-        .order_by(models.BinReading.created_at.desc())
-        .first()
-    )
-    if not reading:
-        raise HTTPException(status_code=404, detail="Bin not found")
-
-    return {
-        "bin_id":     reading.bin_id,
-        "fill_pct":   reading.fill_pct,
-        "is_alert":   reading.is_alert,
-        "message":    "Collection needed!" if reading.is_alert else "All good.",
-        "created_at": str(reading.created_at),
-    }
-
-# ── GET /bin/history ──────────────────────────────────────
-@app.get("/bin/history/{bin_id}")
-def get_bin_history(bin_id: str, limit: int = 20, db: Session = Depends(get_db)):
-    readings = (
-        db.query(models.BinReading)
-        .filter(models.BinReading.bin_id == bin_id)
-        .order_by(models.BinReading.created_at.desc())
-        .limit(limit)
-        .all()
-    )
-    return [
-        {
-            "fill_pct":   r.fill_pct,
-            "is_alert":   r.is_alert,
-            "created_at": str(r.created_at),
-        }
-        for r in readings
-    ]
-
-# ── Health check ──────────────────────────────────────────
-@app.get("/health")
+@app.get("/health", tags=["Meta"])
 def health():
-    return {"status": "running"}
+    """Lightweight liveness probe used by uptime monitors."""
+    return {"status": "ok"}
