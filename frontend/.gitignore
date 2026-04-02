@@ -1,0 +1,7 @@
+
+# dependencies
+/node_modules
+
+# custom additions
+.env
+__pycache__/
