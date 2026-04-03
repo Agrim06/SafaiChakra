@@ -1,22 +1,9 @@
-"""
-main.py
-=======
-SafaiChakra FastAPI application entry point.
-
-Responsibilities:
-  - Create DB tables on startup
-  - Register routers
-  - Enable CORS
-  - Expose /health endpoint
-"""
-
 from __future__ import annotations
 
 import os
 
 from dotenv import load_dotenv
 
-# Load .env before anything else so that all modules pick up the vars
 load_dotenv()
 
 from fastapi import FastAPI

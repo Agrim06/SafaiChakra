@@ -22,19 +22,10 @@ from schemas import RouteResponse
 ALERT_THRESHOLD = float(os.getenv("ALERT_THRESHOLD", 70.0))
 
 
-def get_priority_bins(
-    db: Session,
-    threshold: float = ALERT_THRESHOLD,
-) -> List[models.BinReading]:
-    """
-    Return the *latest* reading for every bin that is at or above `threshold`.
-
-    Uses a subquery to get the most recent reading per bin, then filters
-    by fill level. This avoids fetching stale historical rows.
-    """
+def _get_latest_readings(db: Session) -> List[models.BinReading]:
+    """Return the latest reading for EVERY known bin (no fill filter)."""
     from sqlalchemy import func
 
-    # Subquery: max created_at per bin_id
     latest_ts_sub = (
         db.query(
             models.BinReading.bin_id,
@@ -43,39 +34,89 @@ def get_priority_bins(
         .group_by(models.BinReading.bin_id)
         .subquery()
     )
-
-    # Join back to get full rows at those timestamps
-    latest_readings = (
+    return (
         db.query(models.BinReading)
         .join(
             latest_ts_sub,
             (models.BinReading.bin_id == latest_ts_sub.c.bin_id)
             & (models.BinReading.created_at == latest_ts_sub.c.max_ts),
         )
-        .filter(models.BinReading.fill_pct >= threshold)
         .all()
     )
 
-    # Only include bins with known location
-    return [r for r in latest_readings if r.latitude is not None and r.longitude is not None]
+
+def get_priority_bins(
+    db: Session,
+    threshold: float = ALERT_THRESHOLD,
+) -> List[models.BinReading]:
+    """
+    Return the *latest* reading for every bin at or above `threshold` with GPS.
+    """
+    all_latest = _get_latest_readings(db)
+    return [
+        r for r in all_latest
+        if r.fill_pct >= threshold
+        and r.latitude is not None
+        and r.longitude is not None
+    ]
+
+
+def get_all_bins_with_coords(db: Session) -> List[models.BinReading]:
+    """Return the latest reading for every bin that has GPS coordinates."""
+    all_latest = _get_latest_readings(db)
+    return [r for r in all_latest if r.latitude is not None and r.longitude is not None]
 
 
 def compute_route(db: Session, threshold: float = ALERT_THRESHOLD) -> RouteResponse:
     """
-    High-level entry point: fetch bins → optimise → return RouteResponse.
+    High-level entry point: fetch priority bins → optimise → return RouteResponse.
+
+    Savings comparison:
+      - Unoptimized baseline: visit ALL city bins sequentially (naive approach)
+      - Optimized result:     visit only critical (above threshold) bins via TSP
     """
+    from route_optimizer import _haversine_km
+
+    # All bins with GPS — used for the unoptimized baseline
+    all_bins = get_all_bins_with_coords(db)
+    all_coords: List[Tuple[float, float]] = [(b.latitude, b.longitude) for b in all_bins]
+
+    # Sequential distance of visiting ALL bins (the naive, unoptimized scenario)
+    unoptimized_km = 0.0
+    if len(all_coords) > 1:
+        for i in range(len(all_coords) - 1):
+            unoptimized_km += _haversine_km(
+                all_coords[i][0], all_coords[i][1],
+                all_coords[i + 1][0], all_coords[i + 1][1],
+            )
+    unoptimized_km = round(unoptimized_km, 3)
+
+    # Critical bins only (above threshold with GPS)
     priority_bins = get_priority_bins(db, threshold)
 
     if not priority_bins:
-        return RouteResponse(route=[], total_bins=0, distances=[])
+        return RouteResponse(
+            route=[],
+            total_bins=0,
+            total_city_bins=len(all_bins),
+            distances=[],
+            optimized_distance_km=0.0,
+            unoptimized_distance_km=unoptimized_km,
+        )
 
     bin_ids = [b.bin_id for b in priority_bins]
     coords: List[Tuple[float, float]] = [(b.latitude, b.longitude) for b in priority_bins]
 
     ordered_ids, leg_distances = optimize_route(bin_ids, coords)
 
+    # Optimized: sum of OR-Tools leg distances (exclude the sentinel 0.0 at last stop)
+    optimized_km = round(sum(d for d in leg_distances if d > 0), 3)
+
     return RouteResponse(
         route=ordered_ids,
         total_bins=len(ordered_ids),
+        total_city_bins=len(all_bins),
         distances=leg_distances,
+        optimized_distance_km=optimized_km,
+        unoptimized_distance_km=unoptimized_km,
     )

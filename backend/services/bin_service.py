@@ -47,11 +47,7 @@ def get_latest_reading(db: Session, bin_id: str) -> Optional[models.BinReading]:
     )
 
 
-def get_history(
-    db: Session,
-    bin_id: str,
-    limit: int = 20,
-) -> List[models.BinReading]:
+def get_history(db: Session, bin_id: str, limit: int = 20) -> List[models.BinReading]:
     """Return the last `limit` readings for a bin, newest first."""
     return (
         db.query(models.BinReading)

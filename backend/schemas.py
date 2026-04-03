@@ -54,6 +54,9 @@ class BinHistoryItem(BaseModel):
 # ─────────────────────────────────────────────
 
 class RouteResponse(BaseModel):
-    route:      List[str]
-    total_bins: int
-    distances:  List[float]   # cumulative leg distances (km) for the optimised route
+    route:                    List[str]
+    total_bins:               int    # critical bins being collected this run
+    total_city_bins:          int    # total bins in the city (with GPS)
+    distances:                List[float]  # per-leg distances (km) for the optimised route
+    optimized_distance_km:    float        # TSP-optimal distance (critical bins only)
+    unoptimized_distance_km:  float        # naive sequential distance (ALL city bins)
