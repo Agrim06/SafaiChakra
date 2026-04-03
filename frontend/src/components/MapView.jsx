@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   MapContainer,
   TileLayer,
@@ -8,7 +9,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Map, Maximize2, Minimize2 } from "lucide-react";
+import { Map, Maximize2, Minimize2, X } from "lucide-react";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -204,169 +205,208 @@ function MapLegend() {
   );
 }
 
+/* ── Shared map canvas ─────────────────────────────────── */
+function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH }) {
+  return (
+    <div className="flex-1 relative" style={{ minHeight: bodyH, height: bodyH }}>
+      <style>{`
+        @keyframes mapPulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.6);opacity:0} }
+        @keyframes truckBounce { from{transform:translateY(0)} to{transform:translateY(-3px)} }
+        .leaflet-popup-content-wrapper {
+          background:#111827!important;
+          border:1px solid rgba(255,255,255,0.1)!important;
+          border-radius:12px!important;
+          box-shadow:0 8px 32px rgba(0,0,0,0.6)!important;
+        }
+        .leaflet-popup-tip { background:#111827!important; }
+        .leaflet-popup-content { color:#fff!important; margin:10px 14px!important; }
+      `}</style>
+
+      <MapContainer
+        center={center}
+        zoom={14}
+        style={{ height: "100%", width: "100%", minHeight: bodyH, background: "#0a0f1e" }}
+        zoomControl={false}
+      >
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://carto.com/" style="color:#6b7280">CARTO</a>'
+        />
+
+        {Object.values(statuses || {}).map((s) => {
+          if (!s?.latitude || !s?.longitude) return null;
+          const pos     = [s.latitude, s.longitude];
+          const pct     = s.fill_pct ?? 0;
+          const isDepot = s.bin_id === "DEPOT_00";
+          const color   = isDepot ? "#3b82f6" : pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
+          return (
+            <Marker key={s.bin_id} position={pos} icon={isDepot ? makeDepotIcon() : makeIcon(color, s.is_alert)}>
+              <Popup>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                    {isDepot ? "Dumpyard Depot" : s.bin_id}
+                  </p>
+                  {!isDepot && (
+                    <>
+                      <p style={{ color, fontWeight: 600, fontSize: 12 }}>Fill: {pct.toFixed(1)}%</p>
+                      <div style={{ marginTop: 6, height: 4, borderRadius: 4, background: "#374151", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4 }} />
+                      </div>
+                    </>
+                  )}
+                  <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>
+                    {isDepot ? "Truck Start/End Point" : s.is_alert ? "⚠ Collection needed" : "✓ All good"}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#a855f7" weight={3} opacity={0.7} dashArray="10 5" />}
+        {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#7c3aed" weight={6} opacity={0.18} />}
+        {routeCoords.length > 1 && !optimizing && <AnimatedTruck routeCoords={routeCoords} />}
+
+        <FitBounds route={route} locations={locations} />
+      </MapContainer>
+
+      <MapLegend />
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────── */
 export default function MapView({ route, optimizing, status, statuses }) {
   const [expanded, setExpanded] = useState(false);
 
-  // Build location map from live API data
-  const locations = buildLocations(statuses);
-  const hasLocations = Object.keys(locations).length > 0;
+  // Close on Escape key
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") setExpanded(false); };
+    if (expanded) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
 
-  // Default center: mean of known coords, or fallback
-  const center = hasLocations
-    ? (() => {
-        const vals = Object.values(locations);
-        return [
-          vals.reduce((s, c) => s + c[0], 0) / vals.length,
-          vals.reduce((s, c) => s + c[1], 0) / vals.length,
-        ];
-      })()
-    : [12.305, 76.640]; // Default to Mysuru if no bins have location
+  const locations  = buildLocations(statuses);
+  const vals       = Object.values(locations);
+  const center     = vals.length > 0
+    ? [vals.reduce((s, c) => s + c[0], 0) / vals.length, vals.reduce((s, c) => s + c[1], 0) / vals.length]
+    : [12.305, 76.640];
+  const routeCoords = route ? route.map((id) => locations[id]).filter(Boolean) : [];
 
-  const routeCoords = route
-    ? route.map((id) => locations[id]).filter(Boolean)
-    : [];
+  /* ── Shared header (reused in inline + modal) ─── */
+  const Header = ({ modal = false }) => (
+    <div
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "10px 20px",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        flexShrink: 0,
+        background: "linear-gradient(135deg,#111827,#0d1424)",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#9333ea)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Map size={14} color="#fff" />
+        </div>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Live City Map — Mysuru</p>
+          <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>Bin locations &amp; optimized route</p>
+        </div>
+      </div>
 
-  const mapMinH   = expanded ? "80vh" : 480;
-  const bodyMinH  = expanded ? "calc(80vh - 56px)" : 420;
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {optimizing && (
+          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.35)", color: "#60a5fa", fontWeight: 500 }}>⚙ Computing…</span>
+        )}
+        {route && !optimizing && (
+          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", color: "#c084fc", fontWeight: 500 }}>
+            🚛 {route.filter(b => b !== "DEPOT_00").length} stops dispatched
+          </span>
+        )}
+        {!route && (
+          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+            {Object.keys(locations).length} bins tracked
+          </span>
+        )}
 
-  return (
+        {/* Expand / Close button */}
+        <button
+          onClick={() => setExpanded(v => !v)}
+          title={modal ? "Close fullscreen (Esc)" : "Fullscreen map"}
+          style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: modal ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.05)",
+            border: modal ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(255,255,255,0.1)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", color: modal ? "#f87171" : "#9ca3af",
+            transition: "all 0.2s", flexShrink: 0,
+          }}
+        >
+          {modal ? <X size={13} /> : <Maximize2 size={13} />}
+        </button>
+      </div>
+    </div>
+  );
+
+  /* ── Inline small card ─── */
+  const inlineCard = (
     <div
       className="slide-in rounded-2xl overflow-hidden flex flex-col"
       style={{
-        minHeight: mapMinH,
         border: "1px solid rgba(168,85,247,0.2)",
         background: "linear-gradient(135deg,#111827 0%,#0d1424 100%)",
         boxShadow: route ? "0 0 40px rgba(168,85,247,0.12)" : "none",
-        transition: "box-shadow 0.6s ease, min-height 0.4s ease",
+        transition: "box-shadow 0.6s ease",
       }}
     >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-3"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#9333ea)" }}
-          >
-            <Map size={14} className="text-white" />
-          </div>
-          <div>
-            <p className="text-white font-semibold text-sm">Live City Map — Mysuru</p>
-            <p className="text-gray-500 text-xs">Bin locations &amp; optimized route</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {optimizing && (
-            <span
-              className="text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.35)", color: "#60a5fa" }}
-            >
-              ⚙ Computing route…
-            </span>
-          )}
-          {route && !optimizing && (
-            <span
-              className="text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", color: "#c084fc" }}
-            >
-              🚛 {route.filter(b => b !== "DEPOT_00").length} stops dispatched
-            </span>
-          )}
-          {!route && (
-            <span
-              className="text-xs px-2.5 py-1 rounded-full"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}
-            >
-              {Object.keys(locations).length} bins tracked
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Map */}
-      <div className="flex-1 relative" style={{ minHeight: bodyMinH, transition: "min-height 0.4s ease" }}>
-        <style>{`
-          @keyframes mapPulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.6);opacity:0} }
-          @keyframes truckBounce { from{transform:translateY(0)} to{transform:translateY(-3px)} }
-          .leaflet-popup-content-wrapper {
-            background:#111827!important;
-            border:1px solid rgba(255,255,255,0.1)!important;
-            border-radius:12px!important;
-            box-shadow:0 8px 32px rgba(0,0,0,0.6)!important;
-          }
-          .leaflet-popup-tip { background:#111827!important; }
-          .leaflet-popup-content { color:#fff!important; margin:10px 14px!important; }
-        `}</style>
-
-        <MapContainer
-          center={center}
-          zoom={14}
-          style={{ height: "100%", width: "100%", minHeight: 340, background: "#0a0f1e" }}
-          zoomControl={false}
-        >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            attribution='&copy; <a href="https://carto.com/" style="color:#6b7280">CARTO</a>'
-          />
-
-          {/* Live bin markers — driven entirely from API data */}
-          {Object.values(statuses || {}).map((s) => {
-            if (!s?.latitude || !s?.longitude) return null;
-            const pos   = [s.latitude, s.longitude];
-            const pct   = s.fill_pct ?? 0;
-            const isDepot = s.bin_id === "DEPOT_00";
-            const color = isDepot ? "#3b82f6" : pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
-            return (
-              <Marker key={s.bin_id} position={pos} icon={isDepot ? makeDepotIcon() : makeIcon(color, s.is_alert)}>
-                <Popup>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
-                      {isDepot ? "Dumpyard Depot" : s.bin_id}
-                    </p>
-                    {!isDepot && (
-                      <>
-                        <p style={{ color, fontWeight: 600, fontSize: 12 }}>
-                          Fill: {pct.toFixed(1)}%
-                        </p>
-                        <div style={{
-                          marginTop: 6, height: 4, borderRadius: 4, background: "#374151", overflow: "hidden",
-                        }}>
-                          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4 }} />
-                        </div>
-                      </>
-                    )}
-                    <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>
-                      {isDepot ? "Truck Start/End Point" : s.is_alert ? "⚠ Collection needed" : "✓ All good"}
-                    </p>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-
-          {/* Route trail (dashed) */}
-          {routeCoords.length > 1 && (
-            <Polyline positions={routeCoords} color="#a855f7" weight={3} opacity={0.7} dashArray="10 5" />
-          )}
-          {routeCoords.length > 1 && (
-            <Polyline positions={routeCoords} color="#7c3aed" weight={6} opacity={0.18} />
-          )}
-
-          {/* Animated truck */}
-          {routeCoords.length > 1 && !optimizing && (
-            <AnimatedTruck routeCoords={routeCoords} />
-          )}
-
-          <FitBounds route={route} locations={locations} />
-        </MapContainer>
-
-        {/* Legend overlay */}
-        <MapLegend />
-      </div>
+      <Header modal={false} />
+      <MapCanvas
+        center={center} route={route} optimizing={optimizing}
+        statuses={statuses} locations={locations} routeCoords={routeCoords}
+        bodyH={480}
+      />
     </div>
+  );
+
+  /* ── Fullscreen portal modal ─── */
+  const modal = expanded ? createPortal(
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(4,7,16,0.88)",
+        backdropFilter: "blur(10px)",
+        padding: "2vh 2vw",
+        animation: "fadeIn 0.2s ease",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) setExpanded(false); }}
+    >
+      <style>{`@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }`}</style>
+      <div
+        style={{
+          width: "95vw", height: "94vh",
+          borderRadius: 20, overflow: "hidden",
+          display: "flex", flexDirection: "column",
+          border: "1px solid rgba(168,85,247,0.35)",
+          boxShadow: "0 0 80px rgba(168,85,247,0.2), 0 40px 120px rgba(0,0,0,0.8)",
+          background: "#0d1424",
+        }}
+      >
+        <Header modal={true} />
+        <MapCanvas
+          center={center} route={route} optimizing={optimizing}
+          statuses={statuses} locations={locations} routeCoords={routeCoords}
+          bodyH="calc(94vh - 56px)"
+        />
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <>
+      {inlineCard}
+      {modal}
+    </>
   );
 }

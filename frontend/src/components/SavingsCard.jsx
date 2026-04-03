@@ -141,8 +141,8 @@ export default function SavingsCard({ routeData }) {
         </div>
       </div>
 
-      {/* 4 metrics grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+      {/* Metrics grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, margin: "8px 0" }}>
         <Metric icon={Clock}        label="Time saved"      value={s.timeSaved}  unit="min"  color="#60a5fa" delay={0} />
         <Metric icon={Fuel}         label="Fuel saved"      value={s.fuelSaved}  unit="L"    color="#f59e0b" delay={60} />
         <Metric icon={Leaf}         label="CO₂ reduced"     value={s.co2Saved}   unit="kg"   color="#34d399" delay={120} />

@@ -7,7 +7,9 @@ export default function ControlPanel({
   optimizing, loading,
 }) {
   const pct = threshold;
-  const trackGrad = `linear-gradient(to right, #22c55e 0%, #f59e0b ${pct}%, rgba(255,255,255,0.08) ${pct}%)`;
+  // Normalize the 30-90 range to a 0-100% position for the background gradient
+  const fillPos = ((pct - 30) / (90 - 30)) * 100;
+  const trackGrad = `linear-gradient(to right, #22c55e 0%, #f59e0b ${fillPos}%, rgba(255,255,255,0.08) ${fillPos}%)`;
 
   return (
     <div

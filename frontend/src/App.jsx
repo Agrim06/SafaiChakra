@@ -3,7 +3,6 @@ import axios from "axios";
 
 import Navbar         from "./components/Navbar";
 import BinCard        from "./components/BinCard";
-import AnalyticsChart from "./components/AnalyticsChart";
 import MapView        from "./components/MapView";
 import ControlPanel   from "./components/ControlPanel";
 import AgentPanel     from "./components/AgentPanel";
@@ -25,6 +24,7 @@ export default function App() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isLive,      setIsLive]      = useState(false);
   const [error,       setError]       = useState(null);
+  const [toastHidden, setToastHidden] = useState(false);
 
   // ── 1. Fetch all known bins ───────────────────────────────────────────────
   const fetchAllBins = useCallback(async () => {
@@ -93,9 +93,12 @@ export default function App() {
     }
   }, [fetchAllBins, fetchAllStatuses, fetchHistory, activeBin]);
 
-  // Re-fetch history when active bin changes
+  // Re-fetch history and reset UI state when active bin changes
   useEffect(() => {
-    if (activeBin) fetchHistory(activeBin);
+    if (activeBin) {
+      fetchHistory(activeBin);
+      setToastHidden(false); // bring back toast if navigating back to an alerted bin
+    }
   }, [activeBin, fetchHistory]);
 
   // Initial load
@@ -126,6 +129,7 @@ export default function App() {
 
   const handleSimulateAlert = () => {
     if (!activeBin) return;
+    setToastHidden(false); // force toast to show
     setStatuses((prev) => ({
       ...prev,
       [activeBin]: {
@@ -176,28 +180,56 @@ export default function App() {
           </div>
         )}
 
-        {/* Alert banner */}
-        {status?.is_alert && (
+        {/* Floating Alert Toast */}
+        {status?.is_alert && !toastHidden && (
           <div
-            className="slide-in mt-2 flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl z-50 transition-all duration-300"
             style={{
-              background: "linear-gradient(135deg,rgba(127,29,29,0.6),rgba(153,27,27,0.4))",
-              border: "1px solid rgba(239,68,68,0.4)",
+              position: "fixed",
+              top: "80px",
+              right: "24px",
+              background: "linear-gradient(135deg,rgba(100,20,20,0.65),rgba(120,20,20,0.5))",
               backdropFilter: "blur(8px)",
-              boxShadow: "0 4px 24px rgba(239,68,68,0.15)",
+              animation: "alertEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, alertPulse 2s infinite",
             }}
           >
-            <span className="text-xl">🚨</span>
-            <div>
-              <span className="text-white">
-                <strong>{status.bin_id}</strong> is at{" "}
-                <strong className="text-red-300">{status.fill_pct.toFixed(1)}%</strong> capacity
+            <style>{`
+              @keyframes alertEntrance {
+                0% { transform: translateX(50px) scale(0.8); opacity: 0; }
+                50% { transform: translateX(-10px) scale(1.02); opacity: 1; }
+                100% { transform: translateX(0) scale(1); opacity: 1; }
+              }
+              @keyframes alertPulse {
+                0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(239,68,68,0.3); }
+                50% { box-shadow: 0 4px 24px rgba(239,68,68,0.3), 0 0 15px 1px rgba(239,68,68,0.6); }
+              }
+            `}</style>
+            
+            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-red-400/20 bg-red-500/10 shrink-0">
+              <span className="text-sm animate-pulse">🚨</span>
+            </div>
+            
+            <div className="flex flex-col min-w-[120px]">
+              <span className="text-white text-xs font-semibold tracking-wide flex items-center gap-1.5">
+                Critical
+                <strong className="text-red-300 bg-red-500/10 px-1 py-0.5 rounded text-[10px]">{status.bin_id}</strong>
               </span>
-              <span className="text-red-300/70 ml-2">— Collection crew dispatched</span>
+              <span className="text-red-300/70 text-[10px] mt-0.5">
+                Cap at {status.fill_pct.toFixed(0)}% — Action required
+              </span>
             </div>
-            <div className="ml-auto text-red-400 text-xs border border-red-500/30 px-2 py-1 rounded-lg">
-              ALERT ACTIVE
-            </div>
+            
+            <button 
+              onClick={() => setToastHidden(true)}
+              style={{ padding: "4px", borderRadius: "6px", marginLeft: "8px", background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", color: "#fca5a5" }}
+              onMouseOver={e => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
+              onMouseOut={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
         )}
 
@@ -238,16 +270,29 @@ export default function App() {
         )}
 
         {/* ── Main grid ─────────────────────────────────── */}
-        <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <div className="mt-5 grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
 
-          {/* LEFT */}
-          <div className="flex flex-col gap-5">
+          {/* LEFT SIDEBAR - 4 columns */}
+          <div className="xl:col-span-4 flex flex-col gap-5">
             <BinCard status={status} loading={loading} />
-            <AnalyticsChart history={history} loading={loading} />
+            
+            <ControlPanel
+              onRefresh={fetchData}
+              onOptimize={handleOptimize}
+              onSimulateAlert={handleSimulateAlert}
+              autoRefresh={autoRefresh}
+              onToggleAutoRefresh={() => setAutoRefresh((v) => !v)}
+              threshold={threshold}
+              onThresholdChange={setThreshold}
+              optimizing={optimizing}
+              loading={loading}
+            />
+            
+            <AgentPanel route={route} optimizing={optimizing} status={status} />
           </div>
 
-          {/* RIGHT */}
-          <div className="flex flex-col gap-5">
+          {/* RIGHT ACTIVE VIEW - 8 columns */}
+          <div className="xl:col-span-8 flex flex-col gap-5 h-full">
             <MapView
               route={route}
               optimizing={optimizing}
@@ -255,27 +300,8 @@ export default function App() {
               status={status}
             />
 
-            {/* Bottom row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <ControlPanel
-                onRefresh={fetchData}
-                onOptimize={handleOptimize}
-                onSimulateAlert={handleSimulateAlert}
-                autoRefresh={autoRefresh}
-                onToggleAutoRefresh={() => setAutoRefresh((v) => !v)}
-                threshold={threshold}
-                onThresholdChange={setThreshold}
-                optimizing={optimizing}
-                loading={loading}
-              />
-              <AgentPanel route={route} optimizing={optimizing} status={status} />
-            </div>
+            <SavingsCard routeData={routeData} />
           </div>
-        </div>
-
-        {/* ── Savings row (full width) ───────────────────── */}
-        <div className="mt-5">
-          <SavingsCard routeData={routeData} />
         </div>
 
         {/* Footer */}
