@@ -40,6 +40,29 @@ const makeIcon = (color, pulse = false) =>
     iconAnchor: [14, 28],
   });
 
+const makeDepotIcon = () =>
+  L.divIcon({
+    className: "",
+    html: `
+      <div style="position:relative;width:34px;height:34px;">
+        <div style="
+          position:absolute;inset:-8px;border-radius:50%;
+          background:rgba(59,130,246,0.25);animation:mapPulse 2s ease-in-out infinite;
+        "></div>
+        <div style="
+          width:34px;height:34px;
+          background:#2563eb;
+          border:3px solid #fff;
+          border-radius:10px;
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:0 6px 16px rgba(37,99,235,0.5);
+          font-size:18px;line-height:1;
+        ">🏭</div>
+      </div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 34],
+  });
+
 const makeTruckIcon = () =>
   L.divIcon({
     className: "",
@@ -70,9 +93,15 @@ function buildLocations(statuses) {
 function FitBounds({ route, locations }) {
   const map = useMap();
   useEffect(() => {
-    if (!route?.length) return;
-    const coords = route.map((id) => locations[id]).filter(Boolean);
-    if (coords.length > 1) map.fitBounds(coords, { padding: [50, 50] });
+    if (route && route.length > 1) {
+      // Focus on active route
+      const coords = route.map((id) => locations[id]).filter(Boolean);
+      if (coords.length > 1) map.fitBounds(coords, { padding: [50, 50] });
+    } else {
+      // Focus on all nodes (including Depot)
+      const allCoords = Object.values(locations);
+      if (allCoords.length > 1) map.fitBounds(allCoords, { padding: [50, 50] });
+    }
   }, [route, locations, map]);
   return null;
 }
@@ -156,6 +185,7 @@ function MapLegend() {
         LEGEND
       </p>
       {[
+        { color: "#3b82f6", label: "Dumpyard Depot" },
         { color: "#22c55e", label: "Normal  (<40%)"   },
         { color: "#f59e0b", label: "Warning (40–70%)" },
         { color: "#ef4444", label: "Critical (>70%)"  },
@@ -189,7 +219,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
           vals.reduce((s, c) => s + c[1], 0) / vals.length,
         ];
       })()
-    : [28.614, 77.235];
+    : [12.305, 76.640]; // Default to Mysuru if no bins have location
 
   const routeCoords = route
     ? route.map((id) => locations[id]).filter(Boolean)
@@ -295,22 +325,29 @@ export default function MapView({ route, optimizing, status, statuses }) {
             if (!s?.latitude || !s?.longitude) return null;
             const pos   = [s.latitude, s.longitude];
             const pct   = s.fill_pct ?? 0;
-            const color = pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
+            const isDepot = s.bin_id === "DEPOT_00";
+            const color = isDepot ? "#3b82f6" : pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
             return (
-              <Marker key={s.bin_id} position={pos} icon={makeIcon(color, s.is_alert)}>
+              <Marker key={s.bin_id} position={pos} icon={isDepot ? makeDepotIcon() : makeIcon(color, s.is_alert)}>
                 <Popup>
                   <div>
-                    <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{s.bin_id}</p>
-                    <p style={{ color, fontWeight: 600, fontSize: 12 }}>
-                      Fill: {pct.toFixed(1)}%
+                    <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                      {isDepot ? "Dumpyard Depot" : s.bin_id}
                     </p>
-                    <div style={{
-                      marginTop: 6, height: 4, borderRadius: 4, background: "#374151", overflow: "hidden",
-                    }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4 }} />
-                    </div>
+                    {!isDepot && (
+                      <>
+                        <p style={{ color, fontWeight: 600, fontSize: 12 }}>
+                          Fill: {pct.toFixed(1)}%
+                        </p>
+                        <div style={{
+                          marginTop: 6, height: 4, borderRadius: 4, background: "#374151", overflow: "hidden",
+                        }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4 }} />
+                        </div>
+                      </>
+                    )}
                     <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>
-                      {s.is_alert ? "⚠ Collection needed" : "✓ All good"}
+                      {isDepot ? "Truck Start/End Point" : s.is_alert ? "⚠ Collection needed" : "✓ All good"}
                     </p>
                   </div>
                 </Popup>

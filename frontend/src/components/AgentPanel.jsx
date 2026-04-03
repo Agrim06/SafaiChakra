@@ -89,7 +89,7 @@ export default function AgentPanel({ route, optimizing, status }) {
           <div className="flex flex-wrap gap-1.5">
             {route.map((bin, i) => (
               <span key={i} className="text-xs px-2 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-medium">
-                {bin}
+                {bin === "DEPOT_00" ? "Dumpyard" : bin}
               </span>
             ))}
           </div>
