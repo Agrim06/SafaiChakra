@@ -77,22 +77,33 @@ def compute_route(db: Session, threshold: float = ALERT_THRESHOLD) -> RouteRespo
     """
     from route_optimizer import _haversine_km
 
-    # All bins with GPS — used for the unoptimized baseline
-    all_bins = get_all_bins_with_coords(db)
+    all_bins_raw = get_all_bins_with_coords(db)
+
+    # Separate depot from regular bins for counting
+    depots = [b for b in all_bins_raw if b.bin_id == "DEPOT_00"]
+    depot = depots[0] if depots else None
+    all_bins = [b for b in all_bins_raw if b.bin_id != "DEPOT_00"]
+
     all_coords: List[Tuple[float, float]] = [(b.latitude, b.longitude) for b in all_bins]
 
-    # Sequential distance of visiting ALL bins (the naive, unoptimized scenario)
+    # Sequential distance of visiting ALL bins + start at depot (the naive, unoptimized scenario)
     unoptimized_km = 0.0
-    if len(all_coords) > 1:
-        for i in range(len(all_coords) - 1):
+    unopt_path = []
+    if depot:
+        unopt_path.append((depot.latitude, depot.longitude))
+    unopt_path.extend(all_coords)
+
+    if len(unopt_path) > 1:
+        for i in range(len(unopt_path) - 1):
             unoptimized_km += _haversine_km(
-                all_coords[i][0], all_coords[i][1],
-                all_coords[i + 1][0], all_coords[i + 1][1],
+                unopt_path[i][0], unopt_path[i][1],
+                unopt_path[i + 1][0], unopt_path[i + 1][1],
             )
     unoptimized_km = round(unoptimized_km, 3)
 
     # Critical bins only (above threshold with GPS)
-    priority_bins = get_priority_bins(db, threshold)
+    priority_bins_raw = get_priority_bins(db, threshold)
+    priority_bins = [b for b in priority_bins_raw if b.bin_id != "DEPOT_00"]
 
     if not priority_bins:
         return RouteResponse(
@@ -104,17 +115,26 @@ def compute_route(db: Session, threshold: float = ALERT_THRESHOLD) -> RouteRespo
             unoptimized_distance_km=unoptimized_km,
         )
 
-    bin_ids = [b.bin_id for b in priority_bins]
-    coords: List[Tuple[float, float]] = [(b.latitude, b.longitude) for b in priority_bins]
+    # Ensure depot is at index 0 for OR-Tools
+    active_nodes = []
+    if depot:
+        active_nodes.append(depot)
+    active_nodes.extend(priority_bins)
+
+    bin_ids = [b.bin_id for b in active_nodes]
+    coords: List[Tuple[float, float]] = [(b.latitude, b.longitude) for b in active_nodes]
 
     ordered_ids, leg_distances = optimize_route(bin_ids, coords)
 
     # Optimized: sum of OR-Tools leg distances (exclude the sentinel 0.0 at last stop)
     optimized_km = round(sum(d for d in leg_distances if d > 0), 3)
 
+    # Remove depot from stop count
+    num_stops = len([b for b in ordered_ids if b != "DEPOT_00"])
+
     return RouteResponse(
         route=ordered_ids,
-        total_bins=len(ordered_ids),
+        total_bins=num_stops,
         total_city_bins=len(all_bins),
         distances=leg_distances,
         optimized_distance_km=optimized_km,
