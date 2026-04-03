@@ -8,7 +8,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Map } from "lucide-react";
+import { Map, Maximize2, Minimize2 } from "lucide-react";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -206,6 +206,8 @@ function MapLegend() {
 
 /* ── Main component ─────────────────────────────────────── */
 export default function MapView({ route, optimizing, status, statuses }) {
+  const [expanded, setExpanded] = useState(false);
+
   // Build location map from live API data
   const locations = buildLocations(statuses);
   const hasLocations = Object.keys(locations).length > 0;
@@ -225,32 +227,35 @@ export default function MapView({ route, optimizing, status, statuses }) {
     ? route.map((id) => locations[id]).filter(Boolean)
     : [];
 
+  const mapMinH   = expanded ? "80vh" : 480;
+  const bodyMinH  = expanded ? "calc(80vh - 56px)" : 420;
+
   return (
     <div
       className="slide-in rounded-2xl overflow-hidden flex flex-col"
       style={{
-        minHeight: 400,
+        minHeight: mapMinH,
         border: "1px solid rgba(168,85,247,0.2)",
         background: "linear-gradient(135deg,#111827 0%,#0d1424 100%)",
         boxShadow: route ? "0 0 40px rgba(168,85,247,0.12)" : "none",
-        transition: "box-shadow 0.6s ease",
+        transition: "box-shadow 0.6s ease, min-height 0.4s ease",
       }}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-5 py-4"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+        className="flex items-center justify-between px-5 py-3"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}
       >
         <div className="flex items-center gap-3">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
             style={{ background: "linear-gradient(135deg,#7c3aed,#9333ea)" }}
           >
-            <Map size={16} className="text-white" />
+            <Map size={14} className="text-white" />
           </div>
           <div>
-            <p className="text-white font-semibold text-sm">Live City Map</p>
-            <p className="text-gray-500 text-xs">Bin locations & optimized route</p>
+            <p className="text-white font-semibold text-sm">Live City Map — Mysuru</p>
+            <p className="text-gray-500 text-xs">Bin locations &amp; optimized route</p>
           </div>
         </div>
 
@@ -258,11 +263,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
           {optimizing && (
             <span
               className="text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{
-                background: "rgba(59,130,246,0.12)",
-                border: "1px solid rgba(59,130,246,0.35)",
-                color: "#60a5fa",
-              }}
+              style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.35)", color: "#60a5fa" }}
             >
               ⚙ Computing route…
             </span>
@@ -270,23 +271,15 @@ export default function MapView({ route, optimizing, status, statuses }) {
           {route && !optimizing && (
             <span
               className="text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{
-                background: "rgba(168,85,247,0.12)",
-                border: "1px solid rgba(168,85,247,0.35)",
-                color: "#c084fc",
-              }}
+              style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", color: "#c084fc" }}
             >
-              🚛 {route.length} stops · Truck dispatched
+              🚛 {route.filter(b => b !== "DEPOT_00").length} stops dispatched
             </span>
           )}
           {!route && (
             <span
               className="text-xs px-2.5 py-1 rounded-full"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "#6b7280",
-              }}
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}
             >
               {Object.keys(locations).length} bins tracked
             </span>
@@ -295,7 +288,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
       </div>
 
       {/* Map */}
-      <div className="flex-1 relative" style={{ minHeight: 340 }}>
+      <div className="flex-1 relative" style={{ minHeight: bodyMinH, transition: "min-height 0.4s ease" }}>
         <style>{`
           @keyframes mapPulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.6);opacity:0} }
           @keyframes truckBounce { from{transform:translateY(0)} to{transform:translateY(-3px)} }

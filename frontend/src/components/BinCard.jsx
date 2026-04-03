@@ -1,86 +1,27 @@
-import { AlertTriangle, CheckCircle, Trash2, Zap } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, CheckCircle, Trash2, Wifi } from "lucide-react";
 
 function FillGauge({ pct }) {
   const color  = pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
-  const shadow = pct >= 70
-    ? "0 0 24px rgba(239,68,68,0.35)"
-    : pct >= 40
-    ? "0 0 24px rgba(245,158,11,0.35)"
-    : "0 0 24px rgba(34,197,94,0.35)";
-
+  const shadow = pct >= 70 ? "0 0 20px rgba(239,68,68,0.4)" : pct >= 40 ? "0 0 20px rgba(245,158,11,0.4)" : "0 0 20px rgba(34,197,94,0.4)";
   return (
-    <div className="flex flex-col items-center gap-4">
-      {/* Bin body */}
-      <div className="relative" style={{ width: 88, height: 130 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+      <div style={{ position: "relative", width: 60, height: 88 }}>
         {/* Lid */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 rounded-t-sm z-10"
-          style={{ top: -10, width: 96, height: 12, background: "#374151", borderRadius: "4px 4px 0 0" }}
-        />
+        <div style={{ position: "absolute", top: -7, left: "50%", transform: "translateX(-50%)", width: 66, height: 8, background: "#374151", borderRadius: "3px 3px 0 0", zIndex: 10 }} />
         {/* Handle */}
-        <div
-          className="absolute left-1/2 z-20"
-          style={{
-            top: -18, width: 28, height: 10, marginLeft: -14,
-            border: "3px solid #4b5563",
-            borderBottom: "none",
-            borderRadius: "8px 8px 0 0",
-          }}
-        />
+        <div style={{ position: "absolute", top: -13, left: "50%", marginLeft: -9, width: 18, height: 7, border: "2.5px solid #4b5563", borderBottom: "none", borderRadius: "6px 6px 0 0", zIndex: 20 }} />
         {/* Body */}
-        <div
-          className="absolute inset-0 rounded-b-2xl overflow-hidden"
-          style={{
-            border: `2px solid ${color}44`,
-            background: "#080d1a",
-            boxShadow: shadow,
-            transition: "box-shadow 0.6s ease, border-color 0.4s",
-          }}
-        >
-          {/* Fill */}
-          <div
-            className="fill-bar absolute bottom-0 left-0 right-0"
-            style={{
-              height: `${pct}%`,
-              background: `linear-gradient(to top, ${color}, ${color}66)`,
-              transition: "height 1.2s cubic-bezier(.4,0,.2,1)",
-            }}
-          >
-            {/* Surface ripple */}
-            <div style={{
-              position: "absolute", top: 0, left: 0, right: 0,
-              height: 6,
-              background: `linear-gradient(to bottom, ${color}ff, ${color}00)`,
-            }} />
+        <div style={{ position: "absolute", inset: 0, borderRadius: "0 0 10px 10px", overflow: "hidden", border: `2px solid ${color}44`, background: "#080d1a", boxShadow: shadow, transition: "box-shadow 0.6s" }}>
+          <div className="fill-bar" style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `${pct}%`, background: `linear-gradient(to top, ${color}, ${color}66)` }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(to bottom, ${color}ff, transparent)` }} />
           </div>
-          {/* Glare */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%)",
-            }}
-          />
-          {/* Grid lines */}
-          {[25, 50, 75].map((y) => (
-            <div
-              key={y}
-              className="absolute left-0 right-0"
-              style={{
-                bottom: `${y}%`, height: 1,
-                background: "rgba(255,255,255,0.05)",
-              }}
-            />
-          ))}
+          {[25, 50, 75].map(y => <div key={y} style={{ position: "absolute", left: 0, right: 0, bottom: `${y}%`, height: 1, background: "rgba(255,255,255,0.06)" }} />)}
         </div>
       </div>
-
-      {/* Percentage */}
-      <div className="text-center">
-        <span className="text-5xl font-black tabular-nums" style={{ color, textShadow: shadow }}>
-          {pct.toFixed(1)}
-        </span>
-        <span className="text-2xl font-bold text-gray-500 ml-1">%</span>
-      </div>
+      <span style={{ fontSize: 28, fontWeight: 900, color, textShadow: shadow, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+        {pct.toFixed(0)}<span style={{ fontSize: 14, fontWeight: 600, color: "#6b7280" }}>%</span>
+      </span>
     </div>
   );
 }
@@ -88,117 +29,86 @@ function FillGauge({ pct }) {
 export default function BinCard({ status, loading }) {
   if (loading || !status) {
     return (
-      <div
-        className="rounded-2xl p-6 flex items-center justify-center"
-        style={{
-          minHeight: 300,
-          border: "1px solid rgba(255,255,255,0.06)",
-          background: "linear-gradient(135deg,#111827,#0d1424)",
-        }}
-      >
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-gray-600 text-sm">Loading bin data…</span>
+      <div style={{ borderRadius: 16, padding: "1rem", minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,0.06)", background: "linear-gradient(135deg,#111827,#0d1424)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+          <span style={{ color: "#6b7280", fontSize: 13 }}>Loading…</span>
         </div>
       </div>
     );
   }
 
-  const { bin_id, fill_pct, is_alert, message } = status;
+  const { bin_id, fill_pct, is_alert, message, created_at } = status;
+  const color = fill_pct >= 70 ? "#ef4444" : fill_pct >= 40 ? "#f59e0b" : "#22c55e";
+  const label = fill_pct >= 70 ? "CRITICAL" : fill_pct >= 40 ? "WARNING" : "NORMAL";
 
   return (
     <div
-      className="slide-in rounded-2xl p-6 flex flex-col gap-5"
+      className="slide-in"
       style={{
-        border: `1px solid ${is_alert ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.06)"}`,
-        background: is_alert
-          ? "linear-gradient(135deg,#150a0a,#1a0d0d)"
-          : "linear-gradient(135deg,#111827,#0d1424)",
-        boxShadow: is_alert ? "0 0 40px rgba(239,68,68,0.08)" : "none",
-        transition: "box-shadow 0.6s, border-color 0.4s",
+        borderRadius: 16,
+        padding: "1rem 1.25rem",
+        border: `1px solid ${is_alert ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.06)"}`,
+        background: is_alert ? "linear-gradient(135deg,#150a0a,#1a0d0d)" : "linear-gradient(135deg,#111827,#0d1424)",
+        boxShadow: is_alert ? "0 0 30px rgba(239,68,68,0.07)" : "none",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
       }}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)" }}
-          >
-            <Trash2 size={18} className="text-green-400" />
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Trash2 size={15} color="#4ade80" />
           </div>
           <div>
-            <p className="text-xs text-gray-600 uppercase tracking-widest font-medium">Bin ID</p>
-            <p className="text-white font-bold text-xl leading-tight">{bin_id}</p>
+            <p style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, margin: 0 }}>Active Bin</p>
+            <p style={{ fontSize: 16, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>{bin_id}</p>
           </div>
         </div>
-
-        {is_alert ? (
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-            style={{
-              background: "rgba(239,68,68,0.12)",
-              border: "1px solid rgba(239,68,68,0.35)",
-            }}
-          >
-            <AlertTriangle size={13} className="text-red-400" />
-            <span className="text-red-400 text-xs font-bold tracking-wide">CRITICAL</span>
-          </div>
-        ) : (
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-            style={{
-              background: "rgba(34,197,94,0.08)",
-              border: "1px solid rgba(34,197,94,0.2)",
-            }}
-          >
-            <CheckCircle size={13} className="text-green-400" />
-            <span className="text-green-400 text-xs font-bold tracking-wide">NORMAL</span>
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 99, background: is_alert ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.08)", border: `1px solid ${is_alert ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.2)"}` }}>
+          {is_alert ? <AlertTriangle size={11} color="#f87171" /> : <CheckCircle size={11} color="#4ade80" />}
+          <span style={{ fontSize: 10, fontWeight: 700, color: is_alert ? "#f87171" : "#4ade80", letterSpacing: "0.05em" }}>{label}</span>
+        </div>
       </div>
 
-      {/* Gauge */}
-      <div className="flex-1 flex items-center justify-center py-2">
+      {/* Gauge + stats row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <FillGauge pct={fill_pct} />
-      </div>
 
-      {/* Progress bar */}
-      <div>
-        <div className="flex justify-between text-xs text-gray-600 mb-1.5">
-          <span>Fill level</span>
-          <span>{fill_pct.toFixed(1)}%</span>
-        </div>
-        <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${fill_pct}%`,
-              background:
-                fill_pct >= 70
-                  ? "linear-gradient(to right,#dc2626,#ef4444)"
-                  : fill_pct >= 40
-                  ? "linear-gradient(to right,#d97706,#f59e0b)"
-                  : "linear-gradient(to right,#16a34a,#22c55e)",
-              transition: "width 1.2s ease",
-              boxShadow:
-                fill_pct >= 70
-                  ? "0 0 8px rgba(239,68,68,0.6)"
-                  : fill_pct >= 40
-                  ? "0 0 8px rgba(245,158,11,0.6)"
-                  : "0 0 8px rgba(34,197,94,0.6)",
-            }}
-          />
-        </div>
-      </div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Fill bar */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ fontSize: 11, color: "#6b7280" }}>Fill level</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color }}>{fill_pct.toFixed(1)}%</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 99, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${fill_pct}%`, background: `linear-gradient(to right, ${fill_pct >= 70 ? "#dc2626,#ef4444" : fill_pct >= 40 ? "#d97706,#f59e0b" : "#16a34a,#22c55e"})`, borderRadius: 99, transition: "width 1.2s ease", boxShadow: `0 0 6px ${color}88` }} />
+            </div>
+          </div>
 
-      {/* Status message */}
-      <div
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
-      >
-        <Zap size={13} className={is_alert ? "text-red-400" : "text-green-400"} />
-        <p className="text-sm text-gray-400">{message}</p>
+          {/* 3 mini stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+            {[
+              { label: "Status", val: is_alert ? "Alert" : "OK", color: is_alert ? "#f87171" : "#4ade80" },
+              { label: "Capacity", val: `${(100 - fill_pct).toFixed(0)}%`, color: "#60a5fa" },
+              { label: "Last sync", val: created_at ? new Date(created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--", color: "#a78bfa" },
+            ].map(({ label, val, color: c }) => (
+              <div key={label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                <p style={{ fontSize: 9, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{label}</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: c, margin: 0 }}>{val}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Message */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+            <Wifi size={11} color={is_alert ? "#f87171" : "#4ade80"} />
+            <span style={{ fontSize: 11, color: "#9ca3af" }}>{message}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
