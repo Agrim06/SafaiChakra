@@ -1,14 +1,52 @@
 import { Fuel, Clock, Leaf, TrendingDown } from "lucide-react";
 
-/* Mock savings calculation based on route size */
-function calcSavings(route) {
-  if (!route || route.length < 2) return null;
-  const stops      = route.length;
-  const timeSaved  = Math.round(stops * 4.2);   // minutes
-  const fuelSaved  = (stops * 0.6).toFixed(1);  // litres
-  const co2Saved   = (stops * 1.4).toFixed(1);  // kg
-  const costSaved  = (stops * 22).toFixed(0);   // ₹
-  return { timeSaved, fuelSaved, co2Saved, costSaved, stops };
+/**
+ * Savings constants — typical Indian municipal garbage truck figures
+ * Fuel economy : ~4.5 km/L (diesel garbage truck)  → 0.222 L/km
+ * Diesel price : ₹93/L (national average 2024)
+ * CO₂ factor   : 2.68 kg CO₂ per litre of diesel (IPCC)
+ * Avg city speed: 25 km/h
+ */
+const L_PER_KM    = 1 / 4.5;          // litres consumed per km
+const DIESEL_PRICE = 93;              // ₹ per litre
+const CO2_PER_L   = 2.68;            // kg CO₂ per litre
+const SPEED_KMH   = 25;              // average city speed (km/h)
+
+function calcSavings(routeData) {
+  if (!routeData || !routeData.route || routeData.route.length < 2) return null;
+
+  const optimized_km    = routeData.optimized_distance_km   ?? 0;
+  const unoptimized_km  = routeData.unoptimized_distance_km ?? 0;
+  const saved_km        = Math.max(0, unoptimized_km - optimized_km);
+
+  // If distances are real (backend returned them), use them.
+  // Otherwise fall back to a stop-count estimate so the card is never blank.
+  const hasRealDistances = unoptimized_km > 0;
+  const effective_saved  = hasRealDistances ? saved_km : routeData.route.length * 0.8;
+  const effective_opt    = hasRealDistances ? optimized_km : routeData.route.length * 1.5;
+  const effective_unopt  = hasRealDistances ? unoptimized_km : routeData.route.length * 2.3;
+
+  const fuelSaved = effective_saved * L_PER_KM;
+  const co2Saved  = fuelSaved * CO2_PER_L;
+  const costSaved = fuelSaved * DIESEL_PRICE;
+  const timeSaved = (effective_saved / SPEED_KMH) * 60;
+
+  const pctImprovement = effective_unopt > 0
+    ? ((effective_saved / effective_unopt) * 100)
+    : 0;
+
+  return {
+    stops:           routeData.route.length,
+    saved_km:        effective_saved.toFixed(2),
+    optimized_km:    effective_opt.toFixed(2),
+    unoptimized_km:  effective_unopt.toFixed(2),
+    fuelSaved:       fuelSaved.toFixed(1),
+    co2Saved:        co2Saved.toFixed(1),
+    costSaved:       Math.round(costSaved),
+    timeSaved:       Math.round(timeSaved),
+    pctImprovement:  pctImprovement.toFixed(1),
+    hasRealDistances,
+  };
 }
 
 const Metric = ({ icon: Icon, label, value, unit, color, bg, delay = 0 }) => (
@@ -39,8 +77,8 @@ const Metric = ({ icon: Icon, label, value, unit, color, bg, delay = 0 }) => (
   </div>
 );
 
-export default function SavingsCard({ route }) {
-  const savings = calcSavings(route);
+export default function SavingsCard({ routeData }) {
+  const savings = calcSavings(routeData);
 
   if (!savings) {
     return (
@@ -65,7 +103,7 @@ export default function SavingsCard({ route }) {
         </div>
         <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)" }}>
           <span className="text-2xl">🧠</span>
-          <p className="text-sm text-gray-500">Click <strong className="text-gray-300">Optimize Route</strong> to calculate fuel &amp; time savings</p>
+          <p className="text-sm text-gray-500">Click <strong className="text-gray-300">Optimize Route</strong> to calculate real fuel &amp; time savings</p>
         </div>
       </div>
     );
@@ -81,7 +119,7 @@ export default function SavingsCard({ route }) {
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -91,22 +129,49 @@ export default function SavingsCard({ route }) {
           </div>
           <div>
             <p className="text-white font-semibold text-sm">Efficiency Savings</p>
-            <p className="text-gray-500 text-xs">vs. unoptimized route · {savings.stops} stops</p>
+            <p className="text-gray-500 text-xs">
+              {savings.stops} critical bins collected out of {routeData.total_city_bins ?? savings.stops} total
+            </p>
           </div>
         </div>
-        <span
-          className="text-xs px-2.5 py-1 rounded-full font-semibold"
-          style={{
-            background: "rgba(16,185,129,0.12)",
-            border: "1px solid rgba(16,185,129,0.3)",
-            color: "#34d399",
-          }}
-        >
-          ₹{savings.costSaved} saved
-        </span>
+
+        {/* Distance comparison badge */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className="text-xs px-2.5 py-1 rounded-full font-medium tabular-nums"
+            style={{
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              color: "#f87171",
+            }}
+          >
+            All bins: {savings.unoptimized_km} km
+          </span>
+          <span className="text-gray-700 text-xs">→</span>
+          <span
+            className="text-xs px-2.5 py-1 rounded-full font-medium tabular-nums"
+            style={{
+              background: "rgba(34,197,94,0.08)",
+              border: "1px solid rgba(34,197,94,0.2)",
+              color: "#4ade80",
+            }}
+          >
+            Critical only: {savings.optimized_km} km
+          </span>
+          <span
+            className="text-xs px-2.5 py-1 rounded-full font-semibold"
+            style={{
+              background: "rgba(16,185,129,0.12)",
+              border: "1px solid rgba(16,185,129,0.3)",
+              color: "#34d399",
+            }}
+          >
+            ₹{savings.costSaved} saved · {savings.pctImprovement}% shorter
+          </span>
+        </div>
       </div>
 
-      {/* 4 metrics */}
+      {/* 4 real metrics */}
       <div className="grid grid-cols-2 gap-3">
         <Metric
           icon={Clock}
@@ -137,33 +202,38 @@ export default function SavingsCard({ route }) {
         />
         <Metric
           icon={TrendingDown}
-          label="Cost reduction"
-          value={`₹${savings.costSaved}`}
-          unit=""
+          label="Distance saved"
+          value={savings.saved_km}
+          unit="km"
           color="#c084fc"
           bg="rgba(192,132,252,0.06)"
           delay={240}
         />
       </div>
 
-      {/* Route stops bar */}
+      {/* Route efficiency bar — based on real % improvement */}
       <div className="pt-1">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-gray-600">Route efficiency</span>
+          <span className="text-xs text-gray-600">Route efficiency gain</span>
           <span className="text-xs font-semibold text-emerald-400">
-            {Math.min(100, Math.round(60 + savings.stops * 5))}%
+            {savings.pctImprovement}%
           </span>
         </div>
         <div className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
           <div
             className="h-full rounded-full"
             style={{
-              width: `${Math.min(100, 60 + savings.stops * 5)}%`,
+              width: `${Math.min(100, parseFloat(savings.pctImprovement))}%`,
               background: "linear-gradient(to right, #059669, #34d399)",
               transition: "width 1s ease",
             }}
           />
         </div>
+        <p className="text-xs text-gray-700 mt-1.5">
+          {savings.hasRealDistances
+            ? "Based on real OR-Tools route vs. unoptimized baseline · assumes 4.5 km/L diesel truck at ₹93/L"
+            : "Estimated from stop count — seed GPS coordinates into bins for real distance calculations"}
+        </p>
       </div>
     </div>
   );

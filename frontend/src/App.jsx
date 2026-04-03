@@ -17,7 +17,7 @@ export default function App() {
   const [activeBin,   setActiveBin]   = useState(null);  // selected bin ID
   const [statuses,    setStatuses]    = useState({});     // { bin_id: statusObj }
   const [history,     setHistory]     = useState([]);
-  const [route,       setRoute]       = useState(null);
+  const [routeData,   setRouteData]   = useState(null);  // full API response { route, distances, optimized_distance_km, ... }
   const [loading,     setLoading]     = useState(true);
   const [optimizing,  setOptimizing]  = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -115,7 +115,7 @@ export default function App() {
       const res = await axios.get(
         `${API_BASE}/optimize-route?threshold=${threshold}`
       );
-      setRoute(res.data.route);
+      setRouteData(res.data);   // store full response with distances
       setError(null);
     } catch (err) {
       setError("Route optimisation failed — is the backend running?");
@@ -136,6 +136,9 @@ export default function App() {
       },
     }));
   };
+
+  // Convenience: extract just the ordered bin IDs for map/agent
+  const route = routeData?.route ?? null;
 
   // Derived: active bin status
   const status = activeBin ? (statuses[activeBin] ?? null) : null;
@@ -272,7 +275,7 @@ export default function App() {
 
         {/* ── Savings row (full width) ───────────────────── */}
         <div className="mt-5">
-          <SavingsCard route={route} />
+          <SavingsCard routeData={routeData} />
         </div>
 
         {/* Footer */}
