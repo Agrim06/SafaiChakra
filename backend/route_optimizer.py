@@ -23,11 +23,9 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * R * math.asin(math.sqrt(a))
 
 
-def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]:
-    """
-    Build an integer distance matrix (in metres) from a list of (lat, lon) tuples.
-    OR-Tools requires integer distances.
-    """
+import requests
+
+def _build_haversine_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]:
     n = len(coords)
     matrix: List[List[int]] = []
     for i in range(n):
@@ -37,9 +35,38 @@ def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]
                 row.append(0)
             else:
                 km = _haversine_km(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
-                row.append(int(km * 1000))  # convert to metres
+                row.append(int(km * 1000))
         matrix.append(row)
     return matrix
+
+def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]:
+    """
+    Build an integer distance matrix (in metres) from a list of (lat, lon) tuples.
+    Attempts to fetch real-world driving distances from OSRM. 
+    Falls back to straight-line Haversine if the API fails.
+    """
+    n = len(coords)
+    if n < 2:
+        return [[0]]
+        
+    # OSRM expects lon,lat format
+    coord_string = ";".join([f"{lon},{lat}" for lat, lon in coords])
+    url = f"http://router.project-osrm.org/table/v1/driving/{coord_string}?annotations=distance"
+    
+    try:
+        resp = requests.get(url, timeout=5)
+        data = resp.json()
+        if data.get("code") == "Ok" and "distances" in data:
+            matrix = []
+            for row in data["distances"]:
+                # the OSRM table API returns distances in float meters
+                matrix.append([int(d) for d in row])
+            print("[TSP] Using real-world OSRM driving distance matrix.")
+            return matrix
+    except Exception as e:
+        print("[TSP] OSRM Table API failed, falling back to Haversine:", e)
+        
+    return _build_haversine_matrix(coords)
 
 
 # ── public API ───────────────────────────────────────────────────────────────

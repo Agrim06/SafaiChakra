@@ -119,8 +119,8 @@ function AnimatedTruck({ routeCoords }) {
     segRef.current  = 0;
     setTruckPos(routeCoords[0]);
 
-    const STEPS_PER_SEG = 40; // smoothness
-    const INTERVAL_MS   = 80; // ms between steps
+    const STEPS_PER_SEG = 3;  // low steps per segment since OSRM returns hundreds of micro-segments
+    const INTERVAL_MS   = 10; // blazing fast ~60fps tick
 
     const id = setInterval(() => {
       const seg = stepRef.current;
@@ -263,8 +263,8 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
           );
         })}
 
-        {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#a855f7" weight={3} opacity={0.7} dashArray="10 5" />}
-        {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#7c3aed" weight={6} opacity={0.18} />}
+        {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#a855f7" weight={4} opacity={0.8} dashArray="12 8" />}
+        {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#7c3aed" weight={8} opacity={0.25} />}
         {routeCoords.length > 1 && !optimizing && <AnimatedTruck routeCoords={routeCoords} />}
 
         <FitBounds route={route} locations={locations} />
@@ -291,7 +291,44 @@ export default function MapView({ route, optimizing, status, statuses }) {
   const center     = vals.length > 0
     ? [vals.reduce((s, c) => s + c[0], 0) / vals.length, vals.reduce((s, c) => s + c[1], 0) / vals.length]
     : [12.305, 76.640];
+  
   const routeCoords = route ? route.map((id) => locations[id]).filter(Boolean) : [];
+  const routeSignature = route ? route.join(",") : "";
+  const [roadPath, setRoadPath] = useState(null);
+
+  // Hook to fetch real-world road geometries from OSRM when the route sequence changes
+  useEffect(() => {
+    if (!route || route.length < 2) {
+      setRoadPath(null);
+      return;
+    }
+    const coords = route.map(id => locations[id]).filter(Boolean);
+    if (coords.length < 2) return;
+
+    // Use OSRM public API to snap to roads (format: lon,lat;lon,lat...)
+    const coordString = coords.map(c => `${c[1]},${c[0]}`).join(";");
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (data.routes && data.routes[0]) {
+          // OSRM returns GeoJSON [lon, lat], Leaflet wants [lat, lon]
+          const path = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          setRoadPath(path);
+        } else {
+          setRoadPath(coords); // Fallback to straight lines if routing fails
+        }
+      })
+      .catch(e => {
+        console.error("OSRM Error:", e);
+        setRoadPath(coords);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeSignature]);
+
+  // Use the fetched road path, or fall back to point-to-point lines while loading
+  const displayPath = roadPath || routeCoords;
 
   /* ── Shared header (reused in inline + modal) ─── */
   const Header = ({ modal = false }) => (
@@ -362,7 +399,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
       <Header modal={false} />
       <MapCanvas
         center={center} route={route} optimizing={optimizing}
-        statuses={statuses} locations={locations} routeCoords={routeCoords}
+        statuses={statuses} locations={locations} routeCoords={displayPath}
         bodyH={480}
       />
     </div>
@@ -395,7 +432,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
         <Header modal={true} />
         <MapCanvas
           center={center} route={route} optimizing={optimizing}
-          statuses={statuses} locations={locations} routeCoords={routeCoords}
+          statuses={statuses} locations={locations} routeCoords={displayPath}
           bodyH="calc(94vh - 56px)"
         />
       </div>
