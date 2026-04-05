@@ -20,21 +20,35 @@ ALERT_THRESHOLD = float(os.getenv("ALERT_THRESHOLD", 70.0))
 
 
 def create_reading(db: Session, payload: BinUpdateRequest) -> models.BinReading:
-    """Persist a new bin reading and return the created ORM object."""
+    """Persist a new bin reading or update if it exists, and return the ORM object."""
     is_alert = payload.fill_pct >= ALERT_THRESHOLD
 
-    reading = models.BinReading(
-        bin_id      = payload.bin_id,
-        fill_pct    = payload.fill_pct,
-        distance_cm = payload.distance_cm,
-        latitude    = payload.latitude,
-        longitude   = payload.longitude,
-        is_alert    = is_alert,
-    )
-    db.add(reading)
-    db.commit()
-    db.refresh(reading)
-    return reading
+    existing = db.query(models.BinReading).filter(models.BinReading.bin_id == payload.bin_id).first()
+
+    if existing:
+        existing.fill_pct = payload.fill_pct
+        existing.distance_cm = payload.distance_cm
+        existing.is_alert = is_alert
+        if payload.latitude is not None:
+            existing.latitude = payload.latitude
+        if payload.longitude is not None:
+            existing.longitude = payload.longitude
+        db.commit()
+        db.refresh(existing)
+        return existing
+    else:
+        reading = models.BinReading(
+            bin_id      = payload.bin_id,
+            fill_pct    = payload.fill_pct,
+            distance_cm = payload.distance_cm,
+            latitude    = payload.latitude,
+            longitude   = payload.longitude,
+            is_alert    = is_alert,
+        )
+        db.add(reading)
+        db.commit()
+        db.refresh(reading)
+        return reading
 
 
 def get_latest_reading(db: Session, bin_id: str) -> Optional[models.BinReading]:
