@@ -1,36 +1,37 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
-import Navbar         from "./components/Navbar";
-import BinCard        from "./components/BinCard";
-import MapView        from "./components/MapView";
-import ControlPanel   from "./components/ControlPanel";
-import AgentPanel     from "./components/AgentPanel";
-import SavingsCard    from "./components/SavingsCard";
+import Navbar from "./components/Navbar";
+import BinCard from "./components/BinCard";
+import MapView from "./components/MapView";
+import ControlPanel from "./components/ControlPanel";
+import AgentPanel from "./components/AgentPanel";
+import SavingsCard from "./components/SavingsCard";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS  = 15000;
+const POLL_MS = 15000;
 
 export default function App() {
-  const [allBins,     setAllBins]     = useState([]);
-  const [activeBin,   setActiveBin]   = useState(null);  // selected bin ID
-  const [statuses,    setStatuses]    = useState({});     // { bin_id: statusObj }
-  const [history,     setHistory]     = useState([]);
-  const [routeData,   setRouteData]   = useState(null);  // full API response { route, distances, optimized_distance_km, ... }
-  const [loading,     setLoading]     = useState(true);
-  const [optimizing,  setOptimizing]  = useState(false);
+  const [allBins, setAllBins] = useState([]);
+  const [activeBin, setActiveBin] = useState(null);  // selected bin ID
+  const [statuses, setStatuses] = useState({});     // { bin_id: statusObj }
+  const [history, setHistory] = useState([]);
+  const [routeData, setRouteData] = useState(null);  // full API response { route, distances, optimized_distance_km, ... }
+  const [loading, setLoading] = useState(true);
+  const [optimizing, setOptimizing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [threshold,   setThreshold]   = useState(70);
+  const [threshold, setThreshold] = useState(70);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [isLive,      setIsLive]      = useState(false);
-  const [error,       setError]       = useState(null);
+  const [isLive, setIsLive] = useState(false);
+  const [error, setError] = useState(null);
   const [toastHidden, setToastHidden] = useState(false);
 
   // ── 1. Fetch all known bins ───────────────────────────────────────────────
   const fetchAllBins = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE}/bin/all`);
-      const bins = res.data;
+      // Filter out the depot from the list of actionable bins
+      const bins = res.data.filter(b => b.toLowerCase() !== "depot");
       setAllBins(bins);
       // If no active bin selected yet, default to first
       if (bins.length > 0) {
@@ -127,9 +128,11 @@ export default function App() {
     }
   };
 
-  const handleSimulateAlert = () => {
+  const handleSimulateAlert = async () => {
     if (!activeBin) return;
     setToastHidden(false); // force toast to show
+    
+    // Optimistic local state update
     setStatuses((prev) => ({
       ...prev,
       [activeBin]: {
@@ -139,6 +142,19 @@ export default function App() {
         message: "⚠ Collection needed immediately!",
       },
     }));
+
+    // Push to backend to make it stick
+    try {
+      await axios.post(`${API_BASE}/bin/update`, {
+        bin_id: activeBin,
+        fill_pct: 87,
+        distance_cm: 15
+      });
+      // Refresh history so the chart shows the spike immediately
+      fetchHistory(activeBin);
+    } catch (e) {
+      console.error("Simulation failed", e);
+    }
   };
 
   // Convenience: extract just the ordered bin IDs for map/agent
@@ -204,11 +220,11 @@ export default function App() {
                 50% { box-shadow: 0 4px 24px rgba(239,68,68,0.3), 0 0 15px 1px rgba(239,68,68,0.6); }
               }
             `}</style>
-            
+
             <div className="w-8 h-8 rounded-full flex items-center justify-center border border-red-400/20 bg-red-500/10 shrink-0">
               <span className="text-sm animate-pulse">🚨</span>
             </div>
-            
+
             <div className="flex flex-col min-w-[120px]">
               <span className="text-white text-xs font-semibold tracking-wide flex items-center gap-1.5">
                 Critical
@@ -218,8 +234,8 @@ export default function App() {
                 Cap at {status.fill_pct.toFixed(0)}% — Action required
               </span>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => setToastHidden(true)}
               style={{ padding: "4px", borderRadius: "6px", marginLeft: "8px", background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", color: "#fca5a5" }}
               onMouseOver={e => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
@@ -233,39 +249,32 @@ export default function App() {
           </div>
         )}
 
-        {/* Bin selector tabs (if multiple bins) */}
+        {/* Bin selector dropdown (if multiple bins) */}
         {allBins.length > 1 && (
-          <div className="mt-4 flex gap-2 flex-wrap">
-            {allBins.map((id) => {
-              const s = statuses[id];
-              const isAlert = s?.is_alert;
-              const isActive = id === activeBin;
-              return (
-                <button
-                  key={id}
-                  onClick={() => setActiveBin(id)}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
-                  style={{
-                    background: isActive
-                      ? isAlert
-                        ? "rgba(239,68,68,0.2)"
-                        : "rgba(34,197,94,0.15)"
-                      : "rgba(255,255,255,0.04)",
-                    border: isActive
-                      ? `1px solid ${isAlert ? "rgba(239,68,68,0.5)" : "rgba(34,197,94,0.4)"}`
-                      : "1px solid rgba(255,255,255,0.08)",
-                    color: isActive
-                      ? isAlert ? "#f87171" : "#4ade80"
-                      : "#6b7280",
-                  }}
-                >
-                  {id}
-                  {s && (
-                    <span className="ml-1.5 opacity-70">{s.fill_pct.toFixed(0)}%</span>
-                  )}
-                </button>
-              );
-            })}
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-400">Select Bin:</label>
+            <div className="relative">
+              <select
+                value={activeBin || ""}
+                onChange={(e) => setActiveBin(e.target.value)}
+                className="appearance-none bg-[#1f2937]/80 border border-gray-700 text-gray-200 text-sm rounded-lg px-4 py-2 pr-8 focus:outline-none focus:border-green-500/50 transition-all cursor-pointer"
+                style={{ backdropFilter: "blur(8px)" }}
+              >
+                {allBins.map((id) => {
+                  const s = statuses[id];
+                  return (
+                    <option key={id} value={id}>
+                      {id} {s ? `- ${s.fill_pct.toFixed(0)}%` : ""} {s?.is_alert ? " (⚠ Alert)" : ""}
+                    </option>
+                  );
+                })}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
           </div>
         )}
 
@@ -275,7 +284,7 @@ export default function App() {
           {/* LEFT SIDEBAR - 4 columns */}
           <div className="xl:col-span-4 flex flex-col gap-5">
             <BinCard status={status} loading={loading} />
-            
+
             <ControlPanel
               onRefresh={fetchData}
               onOptimize={handleOptimize}
@@ -287,7 +296,7 @@ export default function App() {
               optimizing={optimizing}
               loading={loading}
             />
-            
+
             <AgentPanel route={route} optimizing={optimizing} status={status} />
           </div>
 

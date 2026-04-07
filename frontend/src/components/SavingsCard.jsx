@@ -1,39 +1,39 @@
 import { Fuel, Clock, Leaf, TrendingDown, ArrowRight } from "lucide-react";
 
-const L_PER_KM     = 1 / 4.5;
+const L_PER_KM = 1 / 4.5;
 const DIESEL_PRICE = 93;
-const CO2_PER_L    = 2.68;
-const SPEED_KMH    = 25;
+const CO2_PER_L = 2.68;
+const SPEED_KMH = 25;
 
 function calcSavings(routeData) {
   if (!routeData || !routeData.route || routeData.route.length < 2) return null;
 
-  const optimized_km   = routeData.optimized_distance_km   ?? 0;
+  const optimized_km = routeData.optimized_distance_km ?? 0;
   const unoptimized_km = routeData.unoptimized_distance_km ?? 0;
-  const saved_km       = Math.max(0, unoptimized_km - optimized_km);
+  const saved_km = Math.max(0, unoptimized_km - optimized_km);
 
   const hasRealDistances = unoptimized_km > 0;
-  const eff_saved  = hasRealDistances ? saved_km       : routeData.route.length * 0.8;
-  const eff_opt    = hasRealDistances ? optimized_km   : routeData.route.length * 1.5;
-  const eff_unopt  = hasRealDistances ? unoptimized_km : routeData.route.length * 2.3;
+  const eff_saved = hasRealDistances ? saved_km : routeData.route.length * 0.8;
+  const eff_opt = hasRealDistances ? optimized_km : routeData.route.length * 1.5;
+  const eff_unopt = hasRealDistances ? unoptimized_km : routeData.route.length * 2.3;
 
-  const fuelSaved  = eff_saved * L_PER_KM;
-  const co2Saved   = fuelSaved * CO2_PER_L;
-  const costSaved  = fuelSaved * DIESEL_PRICE;
-  const timeSaved  = (eff_saved / SPEED_KMH) * 60;
-  const pct        = eff_unopt > 0 ? (eff_saved / eff_unopt) * 100 : 0;
+  const fuelSaved = eff_saved * L_PER_KM;
+  const co2Saved = fuelSaved * CO2_PER_L;
+  const costSaved = fuelSaved * DIESEL_PRICE;
+  const timeSaved = (eff_saved / SPEED_KMH) * 60;
+  const pct = eff_unopt > 0 ? (eff_saved / eff_unopt) * 100 : 0;
 
   return {
     stops: routeData.route.filter(b => b !== "DEPOT_00").length,
     totalCityBins: routeData.total_city_bins ?? routeData.route.length,
-    eff_saved:   eff_saved.toFixed(2),
-    eff_opt:     eff_opt.toFixed(2),
-    eff_unopt:   eff_unopt.toFixed(2),
-    fuelSaved:   fuelSaved.toFixed(1),
-    co2Saved:    co2Saved.toFixed(1),
-    costSaved:   Math.round(costSaved),
-    timeSaved:   Math.round(timeSaved),
-    pct:         pct.toFixed(1),
+    eff_saved: eff_saved.toFixed(2),
+    eff_opt: eff_opt.toFixed(2),
+    eff_unopt: eff_unopt.toFixed(2),
+    fuelSaved: fuelSaved.toFixed(1),
+    co2Saved: co2Saved.toFixed(1),
+    costSaved: Math.round(costSaved),
+    timeSaved: Math.round(timeSaved),
+    pct: pct.toFixed(1),
     hasRealDistances,
   };
 }
@@ -143,10 +143,10 @@ export default function SavingsCard({ routeData }) {
 
       {/* Metrics grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, margin: "8px 0" }}>
-        <Metric icon={Clock}        label="Time saved"      value={s.timeSaved}  unit="min"  color="#60a5fa" delay={0} />
-        <Metric icon={Fuel}         label="Fuel saved"      value={s.fuelSaved}  unit="L"    color="#f59e0b" delay={60} />
-        <Metric icon={Leaf}         label="CO₂ reduced"     value={s.co2Saved}   unit="kg"   color="#34d399" delay={120} />
-        <Metric icon={TrendingDown} label="Distance saved"  value={s.eff_saved}  unit="km"   color="#c084fc" delay={180} />
+        <Metric icon={Clock} label="Time saved" value={s.timeSaved} unit="min" color="#60a5fa" delay={0} />
+        <Metric icon={Fuel} label="Fuel saved" value={s.fuelSaved} unit="L" color="#f59e0b" delay={60} />
+        <Metric icon={Leaf} label="CO₂ reduced" value={s.co2Saved} unit="kg" color="#34d399" delay={120} />
+        <Metric icon={TrendingDown} label="Distance saved" value={s.eff_saved} unit="km" color="#c084fc" delay={180} />
       </div>
 
       {/* Efficiency progress bar */}

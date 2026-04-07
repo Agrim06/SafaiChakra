@@ -14,8 +14,8 @@ import { Map, Maximize2, Minimize2, X } from "lucide-react";
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
-  iconUrl:       require("leaflet/dist/images/marker-icon.png"),
-  shadowUrl:     require("leaflet/dist/images/marker-shadow.png"),
+  iconUrl: require("leaflet/dist/images/marker-icon.png"),
+  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
 });
 
 /* ── Icons ─────────────────────────────────────────────── */
@@ -111,16 +111,16 @@ function FitBounds({ route, locations }) {
 function AnimatedTruck({ routeCoords }) {
   const [truckPos, setTruckPos] = useState(routeCoords[0]);
   const stepRef = useRef(0);
-  const segRef  = useRef(0); // progress within segment [0,1]
+  const segRef = useRef(0); // progress within segment [0,1]
 
   useEffect(() => {
     if (!routeCoords || routeCoords.length < 2) return;
     stepRef.current = 0;
-    segRef.current  = 0;
+    segRef.current = 0;
     setTruckPos(routeCoords[0]);
 
     const STEPS_PER_SEG = 3;  // low steps per segment since OSRM returns hundreds of micro-segments
-    const INTERVAL_MS   = 10; // blazing fast ~60fps tick
+    const INTERVAL_MS = 10; // blazing fast ~60fps tick
 
     const id = setInterval(() => {
       const seg = stepRef.current;
@@ -134,7 +134,7 @@ function AnimatedTruck({ routeCoords }) {
 
       if (t >= 1) {
         stepRef.current += 1;
-        segRef.current   = 0;
+        segRef.current = 0;
         if (stepRef.current >= routeCoords.length - 1) {
           setTruckPos(routeCoords[routeCoords.length - 1]);
           clearInterval(id);
@@ -143,7 +143,7 @@ function AnimatedTruck({ routeCoords }) {
       }
 
       const from = routeCoords[stepRef.current];
-      const to   = routeCoords[Math.min(stepRef.current + 1, routeCoords.length - 1)];
+      const to = routeCoords[Math.min(stepRef.current + 1, routeCoords.length - 1)];
       const clamped = Math.min(t, 1);
       setTruckPos([
         from[0] + (to[0] - from[0]) * clamped,
@@ -187,10 +187,10 @@ function MapLegend() {
       </p>
       {[
         { color: "#3b82f6", label: "Dumpyard Depot" },
-        { color: "#22c55e", label: "Normal  (<40%)"   },
+        { color: "#22c55e", label: "Normal  (<40%)" },
         { color: "#f59e0b", label: "Warning (40–70%)" },
-        { color: "#ef4444", label: "Critical (>70%)"  },
-        { color: "#a855f7", label: "Route path"       },
+        { color: "#ef4444", label: "Critical (>70%)" },
+        { color: "#a855f7", label: "Route path" },
       ].map(({ color, label }) => (
         <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
           <span style={{
@@ -235,10 +235,10 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
 
         {Object.values(statuses || {}).map((s) => {
           if (!s?.latitude || !s?.longitude) return null;
-          const pos     = [s.latitude, s.longitude];
-          const pct     = s.fill_pct ?? 0;
+          const pos = [s.latitude, s.longitude];
+          const pct = s.fill_pct ?? 0;
           const isDepot = s.bin_id === "DEPOT_00";
-          const color   = isDepot ? "#3b82f6" : pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
+          const color = isDepot ? "#3b82f6" : pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
           return (
             <Marker key={s.bin_id} position={pos} icon={isDepot ? makeDepotIcon() : makeIcon(color, s.is_alert)}>
               <Popup>
@@ -286,12 +286,12 @@ export default function MapView({ route, optimizing, status, statuses }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
-  const locations  = buildLocations(statuses);
-  const vals       = Object.values(locations);
-  const center     = vals.length > 0
+  const locations = buildLocations(statuses);
+  const vals = Object.values(locations);
+  const center = vals.length > 0
     ? [vals.reduce((s, c) => s + c[0], 0) / vals.length, vals.reduce((s, c) => s + c[1], 0) / vals.length]
     : [12.305, 76.640];
-  
+
   const routeCoords = route ? route.map((id) => locations[id]).filter(Boolean) : [];
   const routeSignature = route ? route.join(",") : "";
   const [roadPath, setRoadPath] = useState(null);
@@ -324,7 +324,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
         console.error("OSRM Error:", e);
         setRoadPath(coords);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeSignature]);
 
   // Use the fetched road path, or fall back to point-to-point lines while loading

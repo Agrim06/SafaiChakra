@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle, Trash2, Wifi } from "lucide-react";
 
 function FillGauge({ pct }) {
-  const color  = pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
+  const color = pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
   const shadow = pct >= 70 ? "0 0 20px rgba(239,68,68,0.4)" : pct >= 40 ? "0 0 20px rgba(245,158,11,0.4)" : "0 0 20px rgba(34,197,94,0.4)";
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, marginTop: 12 }}>

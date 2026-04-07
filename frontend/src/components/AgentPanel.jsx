@@ -77,10 +77,10 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
           ...(optimizing
             ? { background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }
             : hasRoute
-            ? { background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", color: "#38bdf8" }
-            : hasAlert
-            ? { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }
-            : { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80" }),
+              ? { background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", color: "#38bdf8" }
+              : hasAlert
+                ? { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }
+                : { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80" }),
         }}>
           {optimizing ? "⚙ Computing…" : hasRoute ? "✓ Route ready" : hasAlert ? "⚠ Alert" : "● Monitoring"}
         </div>
@@ -89,9 +89,9 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
       {/* Pipeline steps */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {STEPS.map((step, i) => {
-          const isDone   = i < activeStep;
+          const isDone = i < activeStep;
           const isActive = i === activeStep;
-          const Icon     = step.icon;
+          const Icon = step.icon;
           return (
             <div
               key={step.id}
@@ -113,8 +113,8 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
                 {isDone
                   ? <CheckCircle2 size={14} color="#22c55e" />
                   : isActive && optimizing && i === 2
-                  ? <Loader2 size={14} color={step.color} style={{ animation: "spin 0.7s linear infinite" }} />
-                  : <Icon size={14} color={isActive ? step.color : "#4b5563"} />
+                    ? <Loader2 size={14} color={step.color} style={{ animation: "spin 0.7s linear infinite" }} />
+                    : <Icon size={14} color={isActive ? step.color : "#4b5563"} />
                 }
               </div>
 

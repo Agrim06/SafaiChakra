@@ -68,10 +68,10 @@ export default function Navbar({ lastUpdated, isLive }) {
           {/* Pipeline tags */}
           <div className="hidden lg:flex items-center gap-1.5">
             {[
-              { label: "Monitor",  dot: "bg-green-400",  delay: 0   },
-              { label: "Decide",   dot: "bg-yellow-400", delay: 300 },
-              { label: "Optimize", dot: "bg-blue-400",   delay: 600 },
-              { label: "Act",      dot: "bg-purple-400", delay: 900 },
+              { label: "Monitor", dot: "bg-green-400", delay: 0 },
+              { label: "Decide", dot: "bg-yellow-400", delay: 300 },
+              { label: "Optimize", dot: "bg-blue-400", delay: 600 },
+              { label: "Act", dot: "bg-purple-400", delay: 900 },
             ].map(({ label, dot, delay }, i) => (
               <div key={label} className="flex items-center gap-1">
                 <span
