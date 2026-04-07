@@ -23,19 +23,9 @@ const makeIcon = (color, pulse = false) =>
   L.divIcon({
     className: "",
     html: `
-      <div style="position:relative;width:28px;height:28px;">
-        ${pulse ? `<div style="
-          position:absolute;inset:-6px;border-radius:50%;
-          background:${color}33;animation:mapPulse 1.6s ease-in-out infinite;
-        "></div>` : ""}
-        <div style="
-          width:28px;height:28px;
-          background:${color};
-          border:3px solid rgba(255,255,255,0.9);
-          border-radius:50% 50% 50% 0;
-          transform:rotate(-45deg);
-          box-shadow:0 2px 12px ${color}88;
-        "></div>
+      <div class="relative w-[28px] h-[28px]">
+        ${pulse ? `<div class="absolute -inset-[6px] rounded-full animate-[mapPulse_1.6s_ease-in-out_infinite]" style="background:${color}33;"></div>` : ""}
+        <div class="w-[28px] h-[28px] border-[3px] border-white/90 rounded-[50%_50%_50%_0] -rotate-45" style="background:${color};box-shadow:0 2px 12px ${color}88;"></div>
       </div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 28],
@@ -45,20 +35,9 @@ const makeDepotIcon = () =>
   L.divIcon({
     className: "",
     html: `
-      <div style="position:relative;width:34px;height:34px;">
-        <div style="
-          position:absolute;inset:-8px;border-radius:50%;
-          background:rgba(59,130,246,0.25);animation:mapPulse 2s ease-in-out infinite;
-        "></div>
-        <div style="
-          width:34px;height:34px;
-          background:#2563eb;
-          border:3px solid #fff;
-          border-radius:10px;
-          display:flex;align-items:center;justify-content:center;
-          box-shadow:0 6px 16px rgba(37,99,235,0.5);
-          font-size:18px;line-height:1;
-        ">🏭</div>
+      <div class="relative w-[34px] h-[34px]">
+        <div class="absolute -inset-[8px] rounded-full bg-blue-500/25 animate-[mapPulse_2s_ease-in-out_infinite]"></div>
+        <div class="w-[34px] h-[34px] bg-blue-600 border-[3px] border-white rounded-[10px] flex items-center justify-center shadow-[0_6px_16px_rgba(37,99,235,0.5)] text-[18px] leading-none">🏭</div>
       </div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 34],
@@ -67,11 +46,7 @@ const makeDepotIcon = () =>
 const makeTruckIcon = () =>
   L.divIcon({
     className: "",
-    html: `<div style="
-      font-size:26px;line-height:1;
-      filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6));
-      animation:truckBounce 0.5s ease-in-out infinite alternate;
-    ">🚛</div>`,
+    html: `<div class="text-[26px] leading-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] animate-[truckBounce_0.5s_ease-in-out_infinite_alternate]">🚛</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
@@ -94,15 +69,27 @@ function buildLocations(statuses) {
 function FitBounds({ route, locations }) {
   const map = useMap();
   useEffect(() => {
-    if (route && route.length > 1) {
-      // Focus on active route
-      const coords = route.map((id) => locations[id]).filter(Boolean);
-      if (coords.length > 1) map.fitBounds(coords, { padding: [50, 50] });
-    } else {
-      // Focus on all nodes (including Depot)
-      const allCoords = Object.values(locations);
-      if (allCoords.length > 1) map.fitBounds(allCoords, { padding: [50, 50] });
-    }
+    // Timeout ensures Flexbox/Grid layouts have fully resolved their dimensions
+    // before Leaflet attempts to calculate the center metric, preventing it
+    // from pinning off-center.
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+      if (route && route.length > 1) {
+        // Focus on active route
+        const coords = route.map((id) => locations[id]).filter(Boolean);
+        if (coords.length > 1) map.fitBounds(coords, { padding: [50, 50] });
+      } else {
+        // Focus on all nodes (including Depot) to make sure ALL bins are visible
+        const allCoords = Object.values(locations);
+        if (allCoords.length > 1) {
+          map.fitBounds(allCoords, { padding: [50, 50] });
+        } else {
+          const depotPos = locations["DEPOT_00"] || [12.3106, 76.6450];
+          map.setView(depotPos, 14);
+        }
+      }
+    }, 150);
+    return () => clearTimeout(timer);
   }, [route, locations, map]);
   return null;
 }
@@ -158,47 +145,29 @@ function AnimatedTruck({ routeCoords }) {
   return (
     <Marker position={truckPos} icon={makeTruckIcon()} zIndexOffset={1000}>
       <Popup>
-        <div style={{ color: "#fff", fontWeight: 700 }}>🚛 Collection Truck</div>
+        <div className="text-white font-bold">🚛 Collection Truck</div>
       </Popup>
     </Marker>
   );
 }
 
 /* ── Map Legend overlay ─────────────────────────────────── */
-function MapLegend() {
+function MapLegend({ threshold = 70 }) {
   return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: 24,
-        left: 12,
-        zIndex: 1000,
-        background: "rgba(10,15,30,0.82)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 12,
-        padding: "10px 14px",
-        minWidth: 150,
-        pointerEvents: "none",
-      }}
-    >
-      <p style={{ color: "#9ca3af", fontSize: 10, fontWeight: 600, letterSpacing: 1, marginBottom: 8 }}>
+    <div className="map-legend">
+      <p className="map-legend__title">
         LEGEND
       </p>
       {[
         { color: "#3b82f6", label: "Dumpyard Depot" },
-        { color: "#22c55e", label: "Normal  (<40%)" },
-        { color: "#f59e0b", label: "Warning (40–70%)" },
-        { color: "#ef4444", label: "Critical (>70%)" },
+        { color: "#22c55e", label: `Normal  (<${threshold - 30}%)` },
+        { color: "#f59e0b", label: `Warning (${threshold - 30}–${threshold}%)` },
+        { color: "#ef4444", label: `Critical (>${threshold}%)` },
         { color: "#a855f7", label: "Route path" },
       ].map(({ color, label }) => (
-        <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-          <span style={{
-            width: 10, height: 10, borderRadius: "50%",
-            background: color, flexShrink: 0,
-            boxShadow: `0 0 5px ${color}88`,
-          }} />
-          <span style={{ color: "#d1d5db", fontSize: 11 }}>{label}</span>
+        <div key={label} className="map-legend__item">
+          <span className="map-legend__dot" style={{ background: color, boxShadow: `0 0 5px ${color}88` }} />
+          <span className="text-[11px] text-gray-300">{label}</span>
         </div>
       ))}
     </div>
@@ -206,31 +175,19 @@ function MapLegend() {
 }
 
 /* ── Shared map canvas ─────────────────────────────────── */
-function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH }) {
+function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH, threshold }) {
   return (
-    <div className="flex-1 relative" style={{ minHeight: bodyH, height: bodyH }}>
-      <style>{`
-        @keyframes mapPulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.6);opacity:0} }
-        @keyframes truckBounce { from{transform:translateY(0)} to{transform:translateY(-3px)} }
-        .leaflet-popup-content-wrapper {
-          background:#111827!important;
-          border:1px solid rgba(255,255,255,0.1)!important;
-          border-radius:12px!important;
-          box-shadow:0 8px 32px rgba(0,0,0,0.6)!important;
-        }
-        .leaflet-popup-tip { background:#111827!important; }
-        .leaflet-popup-content { color:#fff!important; margin:10px 14px!important; }
-      `}</style>
-
+    <div className="map-card__body h-full" style={{ minHeight: bodyH }}>
       <MapContainer
         center={center}
         zoom={14}
-        style={{ height: "100%", width: "100%", minHeight: bodyH, background: "#0a0f1e" }}
+        className="w-full h-full bg-[#0a0f1e]"
+        style={{ minHeight: bodyH }}
         zoomControl={false}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://carto.com/" style="color:#6b7280">CARTO</a>'
+          attribution='&copy; <a href="https://carto.com/" className="text-gray-500">CARTO</a>'
         />
 
         {Object.values(statuses || {}).map((s) => {
@@ -238,23 +195,25 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
           const pos = [s.latitude, s.longitude];
           const pct = s.fill_pct ?? 0;
           const isDepot = s.bin_id === "DEPOT_00";
-          const color = isDepot ? "#3b82f6" : pct >= 70 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#22c55e";
+          const isCritical = s.is_alert || pct >= threshold;
+          const isWarning = pct >= threshold - 30;
+          const color = isDepot ? "#3b82f6" : isCritical ? "#ef4444" : isWarning ? "#f59e0b" : "#22c55e";
           return (
-            <Marker key={s.bin_id} position={pos} icon={isDepot ? makeDepotIcon() : makeIcon(color, s.is_alert)}>
+            <Marker key={s.bin_id} position={pos} icon={isDepot ? makeDepotIcon() : makeIcon(color, isCritical)}>
               <Popup>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                  <p className="font-bold text-[13px] mb-1">
                     {isDepot ? "Dumpyard Depot" : s.bin_id}
                   </p>
                   {!isDepot && (
                     <>
-                      <p style={{ color, fontWeight: 600, fontSize: 12 }}>Fill: {pct.toFixed(1)}%</p>
-                      <div style={{ marginTop: 6, height: 4, borderRadius: 4, background: "#374151", overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4 }} />
+                      <p className="font-semibold text-[12px]" style={{ color }}>Fill: {pct.toFixed(1)}%</p>
+                      <div className="mt-1.5 h-1 rounded bg-gray-700 overflow-hidden">
+                        <div className="h-full rounded" style={{ width: `${pct}%`, background: color }} />
                       </div>
                     </>
                   )}
-                  <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>
+                  <p className="text-gray-400 text-[11px] mt-1.5">
                     {isDepot ? "Truck Start/End Point" : s.is_alert ? "⚠ Collection needed" : "✓ All good"}
                   </p>
                 </div>
@@ -276,7 +235,7 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
 }
 
 /* ── Main component ─────────────────────────────────────── */
-export default function MapView({ route, optimizing, status, statuses }) {
+export default function MapView({ route, optimizing, status, statuses, threshold = 70 }) {
   const [expanded, setExpanded] = useState(false);
 
   // Close on Escape key
@@ -287,10 +246,8 @@ export default function MapView({ route, optimizing, status, statuses }) {
   }, [expanded]);
 
   const locations = buildLocations(statuses);
-  const vals = Object.values(locations);
-  const center = vals.length > 0
-    ? [vals.reduce((s, c) => s + c[0], 0) / vals.length, vals.reduce((s, c) => s + c[1], 0) / vals.length]
-    : [12.305, 76.640];
+  // Default map position directly centered at the Dumpyard Depot
+  const center = locations["DEPOT_00"] || [12.3106, 76.6450];
 
   const routeCoords = route ? route.map((id) => locations[id]).filter(Boolean) : [];
   const routeSignature = route ? route.join(",") : "";
@@ -332,36 +289,28 @@ export default function MapView({ route, optimizing, status, statuses }) {
 
   /* ── Shared header (reused in inline + modal) ─── */
   const Header = ({ modal = false }) => (
-    <div
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 20px",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        flexShrink: 0,
-        background: "linear-gradient(135deg,#111827,#0d1424)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#9333ea)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Map size={14} color="#fff" />
+    <div className={`map-card__header ${modal ? 'bg-gradient-to-br from-gray-900 to-gray-800' : ''}`}>
+      <div className="flex items-center gap-2.5">
+        <div className="map-card__icon-wrap">
+          <Map size={14} className="text-white" />
         </div>
         <div>
-          <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Live City Map — Mysuru</p>
-          <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>Bin locations &amp; optimized route</p>
+          <p className="text-[13px] font-bold text-white m-0">Live City Map — Mysuru</p>
+          <p className="text-[11px] text-gray-500 m-0">Bin locations &amp; optimized route</p>
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="flex items-center gap-2">
         {optimizing && (
-          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.35)", color: "#60a5fa", fontWeight: 500 }}>⚙ Computing…</span>
+          <span className="map-badge map-badge--computing">⚙ Computing…</span>
         )}
         {route && !optimizing && (
-          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", color: "#c084fc", fontWeight: 500 }}>
+          <span className="map-badge map-badge--dispatched">
             🚛 {route.filter(b => b !== "DEPOT_00").length} stops dispatched
           </span>
         )}
         {!route && (
-          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+          <span className="map-badge map-badge--tracking">
             {Object.keys(locations).length} bins tracked
           </span>
         )}
@@ -370,14 +319,11 @@ export default function MapView({ route, optimizing, status, statuses }) {
         <button
           onClick={() => setExpanded(v => !v)}
           title={modal ? "Close fullscreen (Esc)" : "Fullscreen map"}
-          style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: modal ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.05)",
-            border: modal ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(255,255,255,0.1)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", color: modal ? "#f87171" : "#9ca3af",
-            transition: "all 0.2s", flexShrink: 0,
-          }}
+          className={`flex items-center justify-center w-7.5 h-7.5 rounded-lg border transition-all shrink-0 ${
+            modal 
+              ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+              : 'bg-white/5 border-white/10 text-gray-400'
+          }`}
         >
           {modal ? <X size={13} /> : <Maximize2 size={13} />}
         </button>
@@ -387,20 +333,12 @@ export default function MapView({ route, optimizing, status, statuses }) {
 
   /* ── Inline small card ─── */
   const inlineCard = (
-    <div
-      className="slide-in rounded-2xl overflow-hidden flex flex-col"
-      style={{
-        border: "1px solid rgba(168,85,247,0.2)",
-        background: "linear-gradient(135deg,#111827 0%,#0d1424 100%)",
-        boxShadow: route ? "0 0 40px rgba(168,85,247,0.12)" : "none",
-        transition: "box-shadow 0.6s ease",
-      }}
-    >
+    <div className={`map-card slide-in ${route ? 'map-card--active' : ''}`}>
       <Header modal={false} />
       <MapCanvas
         center={center} route={route} optimizing={optimizing}
         statuses={statuses} locations={locations} routeCoords={displayPath}
-        bodyH={480}
+        bodyH={480} threshold={threshold}
       />
     </div>
   );
@@ -408,32 +346,15 @@ export default function MapView({ route, optimizing, status, statuses }) {
   /* ── Fullscreen portal modal ─── */
   const modal = expanded ? createPortal(
     <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: "rgba(4,7,16,0.88)",
-        backdropFilter: "blur(10px)",
-        padding: "2vh 2vw",
-        animation: "fadeIn 0.2s ease",
-      }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-[2vh_2vw] animate-[fadeIn_0.2s_ease]"
       onClick={(e) => { if (e.target === e.currentTarget) setExpanded(false); }}
     >
-      <style>{`@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }`}</style>
-      <div
-        style={{
-          width: "95vw", height: "94vh",
-          borderRadius: 20, overflow: "hidden",
-          display: "flex", flexDirection: "column",
-          border: "1px solid rgba(168,85,247,0.35)",
-          boxShadow: "0 0 80px rgba(168,85,247,0.2), 0 40px 120px rgba(0,0,0,0.8)",
-          background: "#0d1424",
-        }}
-      >
+      <div className="w-[95vw] h-[94vh] rounded-[20px] overflow-hidden flex flex-col border border-purple-500/35 shadow-[0_0_80px_rgba(168,85,247,0.2),0_40px_120px_rgba(0,0,0,0.8)] bg-[#0d1424]">
         <Header modal={true} />
         <MapCanvas
           center={center} route={route} optimizing={optimizing}
           statuses={statuses} locations={locations} routeCoords={displayPath}
-          bodyH="calc(94vh - 56px)"
+          bodyH="calc(94vh - 56px)" threshold={threshold}
         />
       </div>
     </div>,

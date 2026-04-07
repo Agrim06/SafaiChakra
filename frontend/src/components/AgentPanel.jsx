@@ -44,87 +44,82 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
   const stops = route ? route.filter(b => b !== "DEPOT_00") : [];
 
   return (
-    <div
-      className="slide-in"
-      style={{
-        borderRadius: 20,
-        border: "1px solid rgba(255,255,255,0.07)",
-        background: "linear-gradient(160deg,#0c1220 0%,#0a0f1a 100%)",
-        padding: "1.25rem",
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem",
-      }}
-    >
+    <div className="agent-card slide-in">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 16px rgba(124,58,237,0.4)",
-          }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="agent-card__icon">
             <Cpu size={16} color="#fff" />
           </div>
           <div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Route Intelligence</p>
-            <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>Automated decision pipeline</p>
+            <p className="text-[13px] font-bold text-white m-0">Route Intelligence</p>
+            <p className="text-[11px] text-gray-500 m-0">Automated decision pipeline</p>
           </div>
         </div>
-        <div style={{
-          fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 99,
-          ...(optimizing
-            ? { background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }
-            : hasRoute
-              ? { background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", color: "#38bdf8" }
-              : hasAlert
-                ? { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }
-                : { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80" }),
-        }}>
+        <div className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+          optimizing ? 'bg-purple-500/10 border border-purple-500/30 text-purple-400' :
+          hasRoute ? 'bg-sky-500/10 border border-sky-500/25 text-sky-400' :
+          hasAlert ? 'bg-red-500/10 border border-red-500/25 text-red-400' :
+          'bg-green-500/10 border border-green-500/25 text-green-400'
+        }`}>
           {optimizing ? "⚙ Computing…" : hasRoute ? "✓ Route ready" : hasAlert ? "⚠ Alert" : "● Monitoring"}
         </div>
       </div>
 
       {/* Pipeline steps */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="flex flex-col gap-1.5">
         {STEPS.map((step, i) => {
           const isDone = i < activeStep;
           const isActive = i === activeStep;
           const Icon = step.icon;
+          
+          let stepClass = "agent-step";
+          if (isDone) stepClass += " agent-step--done";
+          if (!isActive && !isDone) stepClass += " agent-step--pending";
+
           return (
             <div
               key={step.id}
+              className={stepClass}
               style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px", borderRadius: 12,
-                border: isActive ? `1px solid ${step.color}44` : isDone ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent",
-                background: isActive ? step.glow : isDone ? "rgba(255,255,255,0.02)" : "transparent",
-                opacity: !isActive && !isDone ? 0.35 : 1,
-                transition: "all 0.4s ease",
+                borderColor: isActive ? `${step.color}44` : undefined,
+                background: isActive ? step.glow : undefined,
               }}
             >
               {/* Icon bubble */}
-              <div style={{
-                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: isDone ? "rgba(34,197,94,0.15)" : isActive ? `${step.glow}` : "rgba(255,255,255,0.04)",
-              }}>
+              <div 
+                className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-white/5"
+                style={{
+                  background: isDone ? "rgba(34,197,94,0.15)" : isActive ? `${step.glow}` : "rgba(255,255,255,0.04)",
+                }}
+              >
                 {isDone
                   ? <CheckCircle2 size={14} color="#22c55e" />
                   : isActive && optimizing && i === 2
-                    ? <Loader2 size={14} color={step.color} style={{ animation: "spin 0.7s linear infinite" }} />
+                    ? <Loader2 size={14} color={step.color} className="spinner" />
                     : <Icon size={14} color={isActive ? step.color : "#4b5563"} />
                 }
               </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, margin: 0, color: isDone ? "#d1d5db" : isActive ? step.color : "#4b5563" }}>{step.label}</p>
-                <p style={{ fontSize: 10, margin: 0, color: isActive ? "#9ca3af" : "#374151", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{step.desc}</p>
+              <div className="flex-1 min-w-0">
+                <p 
+                  className={`text-[12px] font-semibold m-0 ${isDone ? 'text-gray-300' : ''}`}
+                  style={{ color: !isDone && isActive ? step.color : undefined }}
+                >
+                  {step.label}
+                </p>
+                <p 
+                  className={`text-[10px] m-0 whitespace-nowrap overflow-hidden text-ellipsis ${isActive ? 'text-gray-400' : 'text-gray-700'}`}
+                >
+                  {step.desc}
+                </p>
               </div>
 
               {/* Step number */}
-              <span style={{ fontSize: 10, fontWeight: 700, color: isDone ? "#22c55e" : isActive ? step.color : "#374151", flexShrink: 0 }}>
+              <span 
+                className={`agent-step__num ${isDone ? 'text-green-500' : 'text-gray-700'}`}
+                style={{ color: (!isDone && isActive) ? step.color : undefined }}
+              >
                 {isDone ? "✓" : `0${i + 1}`}
               </span>
             </div>
@@ -134,29 +129,20 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
 
       {/* Route result */}
       {hasRoute && !optimizing && (
-        <div style={{
-          borderRadius: 12, border: "1px solid rgba(167,139,250,0.2)",
-          background: "rgba(167,139,250,0.04)", padding: "10px 12px",
-          display: "flex", flexDirection: "column", gap: 8,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, letterSpacing: "0.08em", margin: 0 }}>OPTIMIZED ROUTE</p>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#a78bfa", background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 99, padding: "2px 8px" }}>
+        <div className="agent-route-box flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-gray-500 font-semibold tracking-wider m-0">OPTIMIZED ROUTE</p>
+            <span className="text-[10px] font-bold text-purple-400 bg-purple-500/15 border border-purple-500/30 rounded-full px-2 py-0.5">
               {stops.length} stops
             </span>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+          <div className="flex flex-wrap gap-1.5 items-center">
             {route.map((bin, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{
-                  fontSize: 11, padding: "3px 8px", borderRadius: 7, fontWeight: 600,
-                  ...(bin === "DEPOT_00"
-                    ? { background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.4)", color: "#93c5fd" }
-                    : { background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd" }),
-                }}>
+              <div key={i} className="flex items-center gap-1">
+                <span className={`agent-bin-chip ${bin === "DEPOT_00" ? '!bg-blue-600/20 !border-blue-600/40 !text-blue-300' : ''}`}>
                   {bin === "DEPOT_00" ? "🏭 Depot" : bin}
                 </span>
-                {i < route.length - 1 && <ArrowRight size={10} color="#374151" />}
+                {i < route.length - 1 && <ArrowRight size={10} className="text-gray-700" />}
               </div>
             ))}
           </div>

@@ -38,33 +38,24 @@ function calcSavings(routeData) {
   };
 }
 
-function Metric({ icon: Icon, label, value, unit, color, delay = 0 }) {
+function Metric({ icon: Icon, label, value, unit, colorClass, borderClass, bgClass, textClass, delay = 0 }) {
   return (
     <div
-      className="slide-in"
-      style={{
-        borderRadius: 12,
-        border: `1px solid ${color}18`,
-        background: `${color}07`,
-        padding: "12px 14px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        animationDelay: `${delay}ms`,
-      }}
+      className={`savings-metric slide-in border ${borderClass} ${bgClass}`}
+      style={{ animationDelay: `${delay}ms` }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: `${color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Icon size={13} color={color} />
+      <div className="flex items-center justify-between">
+        <div className={`savings-metric__icon bg-white/5`}>
+          <Icon size={13} className={colorClass} />
         </div>
-        <span style={{ fontSize: 9, fontWeight: 600, color, opacity: 0.7, letterSpacing: "0.06em" }}>SAVED</span>
+        <span className={`savings-metric__tag ${colorClass} opacity-80 tracking-widest`}>SAVED</span>
       </div>
       <div>
-        <p style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#fff", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+        <p className="savings-metric__value m-0">
           {value}
-          <span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280", marginLeft: 3 }}>{unit}</span>
+          <span className="savings-metric__unit">{unit}</span>
         </p>
-        <p style={{ margin: 0, fontSize: 10, color: "#6b7280", marginTop: 3 }}>{label}</p>
+        <p className="savings-metric__label m-0 mt-1">{label}</p>
       </div>
     </div>
   );
@@ -75,95 +66,70 @@ export default function SavingsCard({ routeData }) {
 
   if (!s) {
     return (
-      <div
-        className="slide-in"
-        style={{
-          borderRadius: 20,
-          border: "1px solid rgba(255,255,255,0.06)",
-          background: "linear-gradient(135deg,#111827,#0d1424)",
-          padding: "1.25rem",
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-        }}
-      >
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#059669,#10b981)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <TrendingDown size={18} color="#fff" />
+      <div className="savings-card savings-card--empty slide-in !flex-row items-center justify-center gap-4 py-8">
+        <div className="savings-card__icon shrink-0">
+          <TrendingDown size={18} className="text-white" />
         </div>
         <div>
-          <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Efficiency Savings</p>
-          <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>Run <strong style={{ color: "#c4b5fd" }}>Optimize Route</strong> to compute fuel, time & CO₂ savings vs. naive full-city run</p>
+          <p className="text-[14px] font-bold text-white m-0">Efficiency Savings</p>
+          <p className="text-[12px] text-gray-500 m-0 mt-1">Run <strong className="text-purple-400">Optimize Route</strong> to compute fuel, time & CO₂ savings.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="slide-in"
-      style={{
-        borderRadius: 20,
-        border: "1px solid rgba(16,185,129,0.2)",
-        background: "linear-gradient(135deg,#111827,#0d1424)",
-        boxShadow: "0 0 40px rgba(16,185,129,0.05)",
-        padding: "1.25rem",
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem",
-      }}
-    >
+    <div className="savings-card savings-card--active slide-in">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#059669,#10b981)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <TrendingDown size={16} color="#fff" />
+      <div className="flex items-start justify-between flex-wrap gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="savings-card__icon shrink-0">
+            <TrendingDown size={16} className="text-white" />
           </div>
           <div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Efficiency Savings</p>
-            <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>
+            <p className="text-[13px] font-bold text-white m-0">Efficiency Savings</p>
+            <p className="text-[11px] text-gray-500 m-0">
               {s.stops} critical of {s.totalCityBins} total bins · OR-Tools TSP
             </p>
           </div>
         </div>
 
         {/* Distance comparison */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", fontWeight: 600 }}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="savings-dist-badge savings-dist-badge--before">
             All bins: {s.eff_unopt} km
           </span>
-          <ArrowRight size={12} color="#374151" />
-          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", color: "#4ade80", fontWeight: 600 }}>
+          <ArrowRight size={12} className="text-gray-700" />
+          <span className="savings-dist-badge savings-dist-badge--after">
             Critical only: {s.eff_opt} km
           </span>
-          <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399", fontWeight: 700 }}>
+          <span className="savings-dist-badge savings-dist-badge--total">
             ₹{s.costSaved} saved · {s.pct}% shorter
           </span>
         </div>
       </div>
 
       {/* Metrics grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, margin: "8px 0" }}>
-        <Metric icon={Clock} label="Time saved" value={s.timeSaved} unit="min" color="#60a5fa" delay={0} />
-        <Metric icon={Fuel} label="Fuel saved" value={s.fuelSaved} unit="L" color="#f59e0b" delay={60} />
-        <Metric icon={Leaf} label="CO₂ reduced" value={s.co2Saved} unit="kg" color="#34d399" delay={120} />
-        <Metric icon={TrendingDown} label="Distance saved" value={s.eff_saved} unit="km" color="#c084fc" delay={180} />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-2.5 my-2">
+        <Metric icon={Clock} label="Time saved" value={s.timeSaved} unit="min" colorClass="text-blue-400" borderClass="border-blue-400/20" bgClass="bg-blue-400/5" delay={0} />
+        <Metric icon={Fuel} label="Fuel saved" value={s.fuelSaved} unit="L" colorClass="text-amber-500" borderClass="border-amber-500/20" bgClass="bg-amber-500/5" delay={60} />
+        <Metric icon={Leaf} label="CO₂ reduced" value={s.co2Saved} unit="kg" colorClass="text-emerald-400" borderClass="border-emerald-400/20" bgClass="bg-emerald-400/5" delay={120} />
+        <Metric icon={TrendingDown} label="Distance saved" value={s.eff_saved} unit="km" colorClass="text-purple-400" borderClass="border-purple-400/20" bgClass="bg-purple-400/5" delay={180} />
       </div>
 
       {/* Efficiency progress bar */}
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: "#6b7280" }}>Route efficiency improvement</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#34d399" }}>{s.pct}%</span>
+        <div className="flex justify-between mb-1.5">
+          <span className="text-[11px] text-gray-500">Route efficiency improvement</span>
+          <span className="text-[11px] font-bold text-emerald-400">{s.pct}%</span>
         </div>
-        <div style={{ height: 5, borderRadius: 99, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
-          <div style={{
-            height: "100%", borderRadius: 99,
-            width: `${Math.min(100, parseFloat(s.pct))}%`,
-            background: "linear-gradient(to right,#059669,#34d399)",
-            transition: "width 1.2s ease",
-          }} />
+        <div className="savings-progress-track">
+          <div 
+            className="savings-progress-fill"
+            style={{ width: `${Math.min(100, parseFloat(s.pct))}%` }} 
+          />
         </div>
-        <p style={{ fontSize: 10, color: "#4b5563", marginTop: 5 }}>
+        <p className="text-[10px] text-gray-600 mt-1.5">
           {s.hasRealDistances
             ? "Real OR-Tools distances · 4.5 km/L diesel truck @ ₹93/L"
             : "Estimated from stop count — add GPS coords for real figures"}

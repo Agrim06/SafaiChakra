@@ -19,8 +19,8 @@ export default function App() {
   const [routeData, setRouteData] = useState(null);  // full API response { route, distances, optimized_distance_km, ... }
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [threshold, setThreshold] = useState(70);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [threshold, setThreshold] = useState(60);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isLive, setIsLive] = useState(false);
   const [error, setError] = useState(null);
@@ -30,14 +30,21 @@ export default function App() {
   const fetchAllBins = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE}/bin/all`);
-      // Filter out the depot from the list of actionable bins
-      const bins = res.data.filter(b => b.toLowerCase() !== "depot");
-      setAllBins(bins);
-      // If no active bin selected yet, default to first
-      if (bins.length > 0) {
-        setActiveBin((prev) => prev ?? bins[0]);
+      const allReturnedBins = res.data;
+      
+      // Filter out the depot from the list of actionable bins for the UI dropdown, then sort
+      const uiBins = allReturnedBins
+        .filter(b => !b.toLowerCase().includes("depot"))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+      setAllBins(uiBins);
+      
+      // If no active bin selected yet, default to first normal bin
+      if (uiBins.length > 0) {
+        setActiveBin((prev) => prev ?? uiBins[0]);
       }
-      return bins;
+      
+      // Return ALL bins (including depot) so we fetch its coordinates/status
+      return allReturnedBins;
     } catch {
       return [];
     }
@@ -164,27 +171,14 @@ export default function App() {
   const status = activeBin ? (statuses[activeBin] ?? null) : null;
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background:
-          "radial-gradient(ellipse at 20% 0%, rgba(34,197,94,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(168,85,247,0.05) 0%, transparent 60%), #080c18",
-        fontFamily: "'Inter', sans-serif",
-      }}
-    >
+    <div className="app-shell">
       <Navbar lastUpdated={lastUpdated} isLive={isLive} />
 
-      <div className="pt-20 px-4 md:px-6 pb-10 max-w-screen-2xl mx-auto">
+      <div className="app-content">
 
         {/* Error banner */}
         {error && (
-          <div
-            className="slide-in mt-2 flex items-center gap-3 px-5 py-3 rounded-2xl text-sm"
-            style={{
-              background: "rgba(127,29,29,0.5)",
-              border: "1px solid rgba(239,68,68,0.3)",
-            }}
-          >
+          <div className="slide-in banner banner--error">
             <span>⚠️</span>
             <span className="text-red-300">{error}</span>
             <button
@@ -198,29 +192,7 @@ export default function App() {
 
         {/* Floating Alert Toast */}
         {status?.is_alert && !toastHidden && (
-          <div
-            className="flex items-center gap-3 px-4 py-3 rounded-xl z-50 transition-all duration-300"
-            style={{
-              position: "fixed",
-              top: "80px",
-              right: "24px",
-              background: "linear-gradient(135deg,rgba(100,20,20,0.65),rgba(120,20,20,0.5))",
-              backdropFilter: "blur(8px)",
-              animation: "alertEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, alertPulse 2s infinite",
-            }}
-          >
-            <style>{`
-              @keyframes alertEntrance {
-                0% { transform: translateX(50px) scale(0.8); opacity: 0; }
-                50% { transform: translateX(-10px) scale(1.02); opacity: 1; }
-                100% { transform: translateX(0) scale(1); opacity: 1; }
-              }
-              @keyframes alertPulse {
-                0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(239,68,68,0.3); }
-                50% { box-shadow: 0 4px 24px rgba(239,68,68,0.3), 0 0 15px 1px rgba(239,68,68,0.6); }
-              }
-            `}</style>
-
+          <div className="banner banner--alert alert-toast slide-in-top-right !fixed top-[80px] right-[24px] z-50 z-index-toast">
             <div className="w-8 h-8 rounded-full flex items-center justify-center border border-red-400/20 bg-red-500/10 shrink-0">
               <span className="text-sm animate-pulse">🚨</span>
             </div>
@@ -237,9 +209,7 @@ export default function App() {
 
             <button
               onClick={() => setToastHidden(true)}
-              style={{ padding: "4px", borderRadius: "6px", marginLeft: "8px", background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer", color: "#fca5a5" }}
-              onMouseOver={e => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
-              onMouseOut={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+              className="alert-toast-close"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -257,8 +227,7 @@ export default function App() {
               <select
                 value={activeBin || ""}
                 onChange={(e) => setActiveBin(e.target.value)}
-                className="appearance-none bg-[#1f2937]/80 border border-gray-700 text-gray-200 text-sm rounded-lg px-4 py-2 pr-8 focus:outline-none focus:border-green-500/50 transition-all cursor-pointer"
-                style={{ backdropFilter: "blur(8px)" }}
+                className="appearance-none bg-[#1f2937]/80 border border-gray-700 text-gray-200 text-sm rounded-lg px-4 py-2 pr-8 focus:outline-none focus:border-green-500/50 transition-all cursor-pointer backdrop-blur-md"
               >
                 {allBins.map((id) => {
                   const s = statuses[id];
@@ -283,7 +252,7 @@ export default function App() {
 
           {/* LEFT SIDEBAR - 4 columns */}
           <div className="xl:col-span-4 flex flex-col gap-5">
-            <BinCard status={status} loading={loading} />
+            <BinCard status={status} loading={loading} threshold={threshold} />
 
             <ControlPanel
               onRefresh={fetchData}
@@ -307,6 +276,7 @@ export default function App() {
               optimizing={optimizing}
               statuses={statuses}
               status={status}
+              threshold={threshold}
             />
 
             <SavingsCard routeData={routeData} />
