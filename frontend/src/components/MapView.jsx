@@ -533,21 +533,37 @@ export default function MapView({ route, optimizing, status, statuses, threshold
 
     console.log('[Route] Traffic segs:', trafficSegs.length, '| Bin coords:', binCoords.length);
 
-    // Build waypoint list, injecting detour points for traffic-crossing legs
+    // Build waypoint list, prioritizing bin locations (up to 25 total)
     const waypointCoords = [];
-    for (let i = 0; i < binCoords.length; i++) {
-      waypointCoords.push(binCoords[i]);
-      if (i < binCoords.length - 1 && trafficSegs.length > 0) {
-        const detour = getDetourWaypoint(binCoords[i], binCoords[i+1], trafficSegs);
-        if (detour) {
-          waypointCoords.push(detour);
+    const maxWaypoints = 25;
+    
+    // First, identify all primary bin locations
+    const primaryBins = binCoords;
+    
+    if (primaryBins.length >= maxWaypoints) {
+      // If we have >25 bins, we MUST only send bins (OSRM limit)
+      waypointCoords.push(...primaryBins.slice(0, maxWaypoints));
+      console.warn("[Route] Exceeded OSRM 25-point limit with BINS ONLY. No detours possible.");
+    } else {
+      // Calculate how many detour points we can afford
+      let availableDetours = maxWaypoints - primaryBins.length;
+      
+      for (let i = 0; i < primaryBins.length; i++) {
+        waypointCoords.push(primaryBins[i]);
+        if (i < primaryBins.length - 1 && availableDetours > 0) {
+          const detour = getDetourWaypoint(primaryBins[i], primaryBins[i+1], trafficSegs);
+          if (detour) {
+            waypointCoords.push(detour);
+            availableDetours--;
+          }
         }
       }
     }
-    console.log('[Route] Final waypoints:', waypointCoords.length, '(', binCoords.length, 'bins +', waypointCoords.length - binCoords.length, 'detours)');
+    
+    console.log('[Route] Final OSRM points:', waypointCoords.length, '(', binCoords.length, 'bins +', waypointCoords.length - binCoords.length, 'detours)');
 
-    // Clamp to OSRM's 25-waypoint limit
-    const limited = waypointCoords.slice(0, 25);
+    // Final safety clip
+    const limited = waypointCoords.slice(0, maxWaypoints);
 
     // Use resilient OSRM fetcher
     const coordString = limited.map(c => `${c[1]},${c[0]}`).join(";");

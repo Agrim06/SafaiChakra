@@ -58,12 +58,29 @@ def _leg_intersects_traffic(start_coord, end_coord, traffic_lines, buffer_km=0.1
     p1 = (start_coord[0], start_coord[1])
     p2 = (end_coord[0], end_coord[1])
     
+    # Pre-calculate leg bounding box for early exit
+    leg_min_lat, leg_max_lat = min(p1[0], p2[0]), max(p1[0], p2[0])
+    leg_min_lon, leg_max_lon = min(p1[1], p2[1]), max(p1[1], p2[1])
+    # Add small buffer to leg box for "NEAR" check
+    leg_min_lat -= 0.002; leg_max_lat += 0.002
+    leg_min_lon -= 0.002; leg_max_lon += 0.002
+
     total_penalty = 0
     
     for line in traffic_lines:
         pts = line
         if len(pts) < 2: continue
         
+        # Bounding box filter for the whole scribble
+        lats = [p[0] for p in pts]
+        lons = [p[1] for p in pts]
+        line_min_lat, line_max_lat = min(lats), max(lats)
+        line_min_lon, line_max_lon = min(lons), max(lons)
+        
+        if (leg_max_lat < line_min_lat or leg_min_lat > line_max_lat or
+            leg_max_lon < line_min_lon or leg_min_lon > line_max_lon):
+            continue # Scribble is nowhere near this leg, skip expensive math
+
         line_has_buffer_penalty = False
         
         for i in range(len(pts) - 1):
@@ -162,10 +179,10 @@ def optimize_route(
     """
     n = len(bin_ids)
 
-    if n == 0:
-        return [], []
-    if n == 1:
-        return bin_ids, [0.0]
+    if n > 15:
+        time_limit_seconds = max(time_limit_seconds, 20)
+    elif n > 10:
+        time_limit_seconds = max(time_limit_seconds, 15)
 
     distance_matrix = _build_distance_matrix(coords, traffic_lines)
 
