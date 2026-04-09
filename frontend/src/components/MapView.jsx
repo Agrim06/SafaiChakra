@@ -232,26 +232,38 @@ export default function MapView({ route, optimizing, statuses, threshold = 70 })
 
   const displayPath = roadPath || (route?.map(id => locations[id]).filter(Boolean) || []);
 
-  const Header = ({ isModal }) => (
-    <div className="flex items-center justify-between p-4 bg-slate-900/50 border-b border-white/5 backdrop-blur-md">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-purple-500/20 rounded-lg"><Map size={16} className="text-purple-400" /></div>
-        <div>
-          <h3 className="text-xs font-black uppercase tracking-widest text-white">Grid Intelligence Overlay</h3>
-          <p className="text-[10px] text-slate-500 font-bold uppercase">Mysuru Sector Alpha</p>
-        </div>
+  /* Inside MapView.jsx - Update the Header sub-component */
+const Header = ({ isModal }) => (
+  <div className="flex items-center justify-between px-5 py-3 bg-slate-900/40 border-b border-white/5 backdrop-blur-xl">
+    <div className="flex items-center gap-3">
+      {/* Small status dot instead of a big icon box */}
+      <div className="relative flex items-center justify-center">
+        <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></div>
+        <div className="absolute w-2 h-2 rounded-full bg-purple-500 animate-ping opacity-40"></div>
       </div>
-      <div className="flex items-center gap-3">
-        {optimizing && <span className="flex items-center gap-2 text-[10px] font-black text-purple-400 animate-pulse uppercase"><Navigation size={12}/> Computing Path</span>}
-        <button 
-          onClick={() => setExpanded(!isModal)} 
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400"
-        >
-          {isModal ? <X size={18} /> : <Maximize2 size={18} />}
-        </button>
+      <div>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90">
+          Grid Intelligence Overlay
+        </h3>
       </div>
     </div>
-  );
+
+    <div className="flex items-center gap-4">
+      {optimizing && (
+        <span className="flex items-center gap-2 text-[10px] font-black text-purple-400 uppercase tracking-widest">
+          <Navigation size={12} className="animate-pulse" /> 
+          Pathing...
+        </span>
+      )}
+      <button 
+        onClick={() => setExpanded(!isModal)} 
+        className="p-1.5 hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-white border border-transparent hover:border-white/10"
+      >
+        {isModal ? <X size={16} /> : <Maximize2 size={16} />}
+      </button>
+    </div>
+  </div>
+);
 
   return (
     <>

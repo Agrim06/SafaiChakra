@@ -13,13 +13,10 @@ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 const POLL_MS = 15000;
 
 export default function App() {
-  // --- Core State ---
   const [allBins, setAllBins] = useState([]);
   const [activeBin, setActiveBin] = useState(null);
   const [statuses, setStatuses] = useState({});
   const [routeData, setRouteData] = useState(null);
-  
-  // --- UI & UX State ---
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -29,7 +26,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [toastHidden, setToastHidden] = useState(false);
 
-  // --- 1. Fetch Bins (List Discovery) ---
+  // 1. Discovery logic
   const fetchBinList = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API_BASE}/bin/all`);
@@ -39,21 +36,17 @@ export default function App() {
       
       setAllBins(uiBins);
       if (uiBins.length > 0) setActiveBin(prev => prev ?? uiBins[0]);
-      return data; // Return full list including depot for sync
+      return data;
     } catch (err) {
-      console.error("Discovery failed", err);
       return [];
     }
   }, []);
 
-  // --- 2. Master Sync Engine ---
+  // 2. Sync Engine
   const fetchData = useCallback(async (signal) => {
     if (!autoRefresh) setLoading(true);
-    
     try {
       const bins = await fetchBinList();
-      if (bins.length === 0) throw new Error("No nodes found");
-
       const results = await Promise.allSettled(
         bins.map(id => axios.get(`${API_BASE}/bin/status/${id}`, { signal }))
       );
@@ -66,94 +59,61 @@ export default function App() {
       setStatuses(statusMap);
       setIsLive(true);
       setError(null);
-      setLastUpdated(new Date().toLocaleTimeString([], { 
-        hour: '2-digit', minute: '2-digit', second: '2-digit' 
-      }));
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
-      if (axios.isCancel(err)) return;
-      setIsLive(false);
-      setError("System Link Interrupted. Checking connection...");
+      if (!axios.isCancel(err)) setIsLive(false);
     } finally {
       setLoading(false);
     }
   }, [fetchBinList, autoRefresh]);
 
-  // Initial Load & Polling Logic
   useEffect(() => {
     const controller = new AbortController();
     fetchData(controller.signal);
-
     let intervalId;
     if (autoRefresh) {
       intervalId = setInterval(() => fetchData(controller.signal), POLL_MS);
     }
-
     return () => {
       controller.abort();
       if (intervalId) clearInterval(intervalId);
     };
   }, [fetchData, autoRefresh]);
 
-  // --- 3. Command Actions ---
   const handleOptimize = async () => {
     setOptimizing(true);
-    setError(null);
     try {
-      const { data } = await axios.get(`${API_BASE}/optimize-route`, {
-        params: { threshold }
-      });
+      const { data } = await axios.get(`${API_BASE}/optimize-route`, { params: { threshold } });
       setRouteData(data);
+      setError(null);
     } catch (err) {
-      setError("Routing Engine Unreachable. Using fallback cache.");
-    } finally {
-      setOptimizing(false);
-    }
+      setError("Routing Engine Offline.");
+    } finally { setOptimizing(false); }
   };
 
   const handleSimulateAlert = async () => {
     if (!activeBin) return;
     setToastHidden(false);
-    
-    // Optimistic UI Update
-    setStatuses(prev => ({
-      ...prev,
-      [activeBin]: { ...prev[activeBin], fill_pct: 87, is_alert: true }
-    }));
-
+    setStatuses(prev => ({ ...prev, [activeBin]: { ...prev[activeBin], fill_pct: 87, is_alert: true } }));
     try {
-      await axios.post(`${API_BASE}/bin/update`, { 
-        bin_id: activeBin, 
-        fill_pct: 87, 
-        distance_cm: 15 
-      });
-    } catch (e) {
-      console.error("Simulation failed", e);
-    }
+      await axios.post(`${API_BASE}/bin/update`, { bin_id: activeBin, fill_pct: 87, distance_cm: 15 });
+    } catch (e) { console.error(e); }
   };
 
-  // Derived Active Status
-  const activeStatus = useMemo(() => 
-    activeBin ? statuses[activeBin] : null
-  , [activeBin, statuses]);
+  const activeStatus = useMemo(() => activeBin ? statuses[activeBin] : null, [activeBin, statuses]);
 
   return (
     <div className="min-h-screen bg-[#05070a] text-white selection:bg-green-500/30 font-inter antialiased">
       <Navbar lastUpdated={lastUpdated} isLive={isLive} />
 
       <main className="max-w-[1600px] mx-auto px-6 py-8">
-        
-        {/* Modern Error Banner */}
         {error && (
           <div className="glass-panel border-red-500/20 bg-red-500/5 mb-6 px-4 py-3 flex items-center justify-between animate-in fade-in slide-in-from-top-4">
-            <div className="flex items-center gap-3">
-              <Zap size={16} className="text-red-400" />
-              <p className="text-sm font-medium text-red-200">{error}</p>
-            </div>
+            <div className="flex items-center gap-3"><Zap size={16} className="text-red-400" /><p className="text-sm font-medium text-red-200">{error}</p></div>
             <button onClick={() => setError(null)} className="hover:bg-white/10 p-1.5 rounded-lg transition-colors">✕</button>
           </div>
         )}
 
-        {/* Floating Intelligence Notification */}
         {activeStatus?.is_alert && !toastHidden && (
           <div className="fixed top-24 right-6 z-[1000] glass-panel border-red-500/30 bg-red-500/10 p-4 min-w-[340px] shadow-[0_0_40px_rgba(239,68,68,0.2)] animate-in slide-in-from-right-8">
             <div className="flex gap-4">
@@ -162,16 +122,9 @@ export default function App() {
                 <div className="absolute inset-0 rounded-2xl border-2 border-red-500 animate-ping opacity-20"></div>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2">
-                   <ShieldAlert size={14} className="text-red-400" />
-                   <h3 className="text-xs font-black tracking-widest uppercase">Critical Overflow</h3>
-                </div>
+                <div className="flex items-center gap-2"><ShieldAlert size={14} className="text-red-400" /><h3 className="text-xs font-black tracking-widest uppercase">Critical Overflow</h3></div>
                 <p className="text-[11px] text-red-200/60 mt-1 font-bold">Node {activeBin} at {activeStatus.fill_pct.toFixed(0)}%</p>
-                <button 
-                  onClick={handleOptimize} 
-                  disabled={optimizing}
-                  className="mt-3 w-full py-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 rounded-lg text-[10px] font-black uppercase tracking-widest text-red-100 transition-all active:scale-95 disabled:opacity-50"
-                >
+                <button onClick={handleOptimize} disabled={optimizing} className="mt-3 w-full py-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 rounded-lg text-[10px] font-black uppercase tracking-widest text-red-100 transition-all active:scale-95 disabled:opacity-50">
                   {optimizing ? <Loader2 className="animate-spin mx-auto" size={14} /> : "Dispatch Fleet →"}
                 </button>
               </div>
@@ -180,15 +133,12 @@ export default function App() {
           </div>
         )}
 
-        {/* Header Section */}
         <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-gradient leading-none">COMMAND CENTER</h1>
             <div className="flex items-center gap-2 mt-2">
               <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'} animate-pulse`}></div>
-              <p className="text-[11px] text-slate-500 font-black uppercase tracking-[0.2em]">
-                {isLive ? 'Global Grid Synchronized' : 'Link Offline'}
-              </p>
+              <p className="text-[11px] text-slate-500 font-black uppercase tracking-[0.2em]">{isLive ? 'Global Grid Synchronized' : 'Link Offline'}</p>
             </div>
           </div>
 
@@ -196,15 +146,9 @@ export default function App() {
             <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Active Intelligence Node</label>
             <div className="flex items-center gap-4 bg-slate-900/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl group hover:border-purple-500/30 transition-all">
               <div className="relative flex-1 min-w-[260px]">
-                <select
-                  value={activeBin || ""}
-                  onChange={(e) => setActiveBin(e.target.value)}
-                  className="w-full bg-slate-800/80 appearance-none border-none text-xs font-black uppercase tracking-widest rounded-xl px-5 py-3 outline-none cursor-pointer focus:ring-2 ring-purple-500/40 transition-all pr-12"
-                >
+                <select value={activeBin || ""} onChange={(e) => setActiveBin(e.target.value)} className="w-full bg-slate-800/80 appearance-none border-none text-xs font-black uppercase tracking-widest rounded-xl px-5 py-3 outline-none cursor-pointer focus:ring-2 ring-purple-500/40 transition-all pr-12">
                   {allBins.map((id) => (
-                    <option key={id} value={id} className="bg-slate-900 font-sans">
-                      {id} {statuses[id] ? `(${statuses[id].fill_pct.toFixed(0)}%)` : ""}
-                    </option>
+                    <option key={id} value={id} className="bg-slate-900 font-sans">{id} {statuses[id] ? `(${statuses[id].fill_pct.toFixed(0)}%)` : ""}</option>
                   ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-hover:text-purple-400 transition-colors" />
@@ -213,9 +157,7 @@ export default function App() {
           </div>
         </header>
 
-        {/* Dashboard Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-          
           <section className="xl:col-span-4 space-y-8">
             <BinCard status={activeStatus} loading={loading} threshold={threshold} />
             <ControlPanel
@@ -237,7 +179,10 @@ export default function App() {
           </section>
 
           <section className="xl:col-span-8 space-y-8 h-full">
-            <div className="glass-panel overflow-hidden border-white/5 h-[500px] lg:h-[700px] shadow-2xl relative group">
+            {/* THE FIX: Removed the absolute positioned 'Live Mysuru Grid Overlay' div 
+                from here. The header is now handled internally by MapView.
+            */}
+            <div className="h-[500px] lg:h-[700px] shadow-2xl relative">
               <MapView
                 route={routeData?.route}
                 optimizing={optimizing}
@@ -245,15 +190,7 @@ export default function App() {
                 status={activeStatus}
                 threshold={threshold}
               />
-              
-              <div className="absolute top-6 left-6 z-[500] pointer-events-none">
-                 <div className="glass-panel bg-slate-950/60 backdrop-blur-md px-4 py-2 border-white/10 flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-purple-500 animate-ping"></div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Live Mysuru Grid Overlay</span>
-                 </div>
-              </div>
             </div>
-
             <SavingsCard routeData={routeData} />
           </section>
         </div>
@@ -265,12 +202,8 @@ export default function App() {
              <div className="h-6 w-6 rounded-lg border-2 border-white"></div>
           </div>
           <div className="text-center space-y-1">
-            <p className="text-[10px] uppercase tracking-[0.4em] text-slate-600 font-black">
-              SafaiChakra Intelligence System · v1.0.4
-            </p>
-            <p className="text-[9px] text-slate-800 font-bold uppercase tracking-widest">
-              Automated Waste Management & Logic Engine · {new Date().getFullYear()}
-            </p>
+            <p className="text-[10px] uppercase tracking-[0.4em] text-slate-600 font-black">SafaiChakra Intelligence System · v1.0.4</p>
+            <p className="text-[9px] text-slate-800 font-bold uppercase tracking-widest">Automated Waste Management & Logic Engine · {new Date().getFullYear()}</p>
           </div>
         </footer>
       </main>
