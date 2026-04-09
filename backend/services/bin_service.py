@@ -76,3 +76,20 @@ def get_all_bins(db: Session) -> List[str]:
     """Return a de-duplicated list of all known bin IDs."""
     rows = db.query(models.BinReading.bin_id).distinct().all()
     return [r.bin_id for r in rows]
+
+def calculate_predictive_risk(bin_id: str, current_fill: float) -> int:
+    """
+    Hackathon Feature: Calculates a deterministic simulated 24h risk
+    so the optimizer and the frontend heatmap always agree.
+    """
+    import random
+    if current_fill >= 90:
+        return 99
+
+    # Use bin_id to seed deterministic randomness so the heatmap doesn't flicker
+    random.seed(bin_id)
+    velocity = random.uniform(5, 35)
+    random.seed() # reset to completely random
+
+    projected = current_fill + velocity
+    return int(min(projected, 99))

@@ -6,10 +6,11 @@ import {
   Marker,
   Popup,
   Polyline,
+  CircleMarker,
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Map, Maximize2, Minimize2, X } from "lucide-react";
+import { Map, Maximize2, X } from "lucide-react";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -206,7 +207,7 @@ function MapLegend() {
 }
 
 /* ── Shared map canvas ─────────────────────────────────── */
-function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH }) {
+function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH, showPredictiveMap, predictiveData }) {
   return (
     <div className="flex-1 relative" style={{ minHeight: bodyH, height: bodyH }}>
       <style>{`
@@ -263,6 +264,36 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
           );
         })}
 
+        {showPredictiveMap && predictiveData && predictiveData.map((p) => {
+          if (!p.latitude || !p.longitude) return null;
+          const risk = p.spillover_risk;
+          const radius = risk > 80 ? 40 : risk > 50 ? 25 : 15;
+          const opacity = risk > 80 ? 0.4 : risk > 50 ? 0.3 : 0.2;
+          const color = risk > 80 ? "#ef4444" : risk > 50 ? "#f59e0b" : "#3b82f6";
+          return (
+            <CircleMarker
+              key={`pred-${p.bin_id}`}
+              center={[p.latitude, p.longitude]}
+              radius={radius}
+              pathOptions={{
+                color: color,
+                fillColor: color,
+                fillOpacity: opacity,
+                weight: 0
+              }}
+            >
+              <Popup>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700, color: "#fecaca" }}>
+                  <span style={{ color: "#f87171" }}>⚡</span> AI Forecast
+                </div>
+                <div style={{ fontSize: 13, marginTop: 4, fontWeight: 600 }}>Bin: {p.bin_id}</div>
+                <div style={{ fontSize: 12, color: color }}>Spillover Risk: {p.spillover_risk}%</div>
+                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 4, paddingBottom: 4 }}>Predicted in next 24h</div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+
         {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#a855f7" weight={4} opacity={0.8} dashArray="12 8" />}
         {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#7c3aed" weight={8} opacity={0.25} />}
         {routeCoords.length > 1 && !optimizing && <AnimatedTruck routeCoords={routeCoords} />}
@@ -276,7 +307,7 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
 }
 
 /* ── Main component ─────────────────────────────────────── */
-export default function MapView({ route, optimizing, status, statuses }) {
+export default function MapView({ route, optimizing, status, statuses, showPredictiveMap, predictiveData }) {
   const [expanded, setExpanded] = useState(false);
 
   // Close on Escape key
@@ -400,7 +431,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
       <MapCanvas
         center={center} route={route} optimizing={optimizing}
         statuses={statuses} locations={locations} routeCoords={displayPath}
-        bodyH={480}
+        bodyH={480} showPredictiveMap={showPredictiveMap} predictiveData={predictiveData}
       />
     </div>
   );
@@ -433,7 +464,7 @@ export default function MapView({ route, optimizing, status, statuses }) {
         <MapCanvas
           center={center} route={route} optimizing={optimizing}
           statuses={statuses} locations={locations} routeCoords={displayPath}
-          bodyH="calc(94vh - 56px)"
+          bodyH="calc(94vh - 56px)" showPredictiveMap={showPredictiveMap} predictiveData={predictiveData}
         />
       </div>
     </div>,

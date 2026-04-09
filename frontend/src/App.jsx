@@ -25,6 +25,10 @@ export default function App() {
   const [isLive,      setIsLive]      = useState(false);
   const [error,       setError]       = useState(null);
   const [toastHidden, setToastHidden] = useState(false);
+  
+  // Hackathon AI Feature
+  const [showPredictiveMap, setShowPredictiveMap] = useState(false);
+  const [predictiveData, setPredictiveData]       = useState(null);
 
   // ── 1. Fetch all known bins ───────────────────────────────────────────────
   const fetchAllBins = useCallback(async () => {
@@ -139,6 +143,21 @@ export default function App() {
         message: "⚠ Collection needed immediately!",
       },
     }));
+  };
+
+  const togglePredictiveMode = async () => {
+    if (showPredictiveMap) {
+      setShowPredictiveMap(false);
+      setPredictiveData(null);
+    } else {
+      setShowPredictiveMap(true);
+      try {
+        const res = await axios.get(`${API_BASE}/bin/predict`);
+        setPredictiveData(res.data.predictions);
+      } catch (err) {
+        console.error("Failed to fetch predictions", err);
+      }
+    }
   };
 
   // Convenience: extract just the ordered bin IDs for map/agent
@@ -286,6 +305,8 @@ export default function App() {
               onThresholdChange={setThreshold}
               optimizing={optimizing}
               loading={loading}
+              showPredictiveMap={showPredictiveMap}
+              onTogglePredict={togglePredictiveMode}
             />
             
             <AgentPanel route={route} optimizing={optimizing} status={status} />
@@ -298,6 +319,8 @@ export default function App() {
               optimizing={optimizing}
               statuses={statuses}
               status={status}
+              showPredictiveMap={showPredictiveMap}
+              predictiveData={predictiveData}
             />
 
             <SavingsCard routeData={routeData} />

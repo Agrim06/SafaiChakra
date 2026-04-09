@@ -5,6 +5,7 @@ export default function ControlPanel({
   autoRefresh, onToggleAutoRefresh,
   threshold, onThresholdChange,
   optimizing, loading,
+  showPredictiveMap, onTogglePredict
 }) {
   const pct = threshold;
   // Normalize the 30-90 range to a 0-100% position for the background gradient
@@ -56,8 +57,16 @@ export default function ControlPanel({
             transition: "all 0.2s",
             width: "100%", textAlign: "left",
           }}
-          onMouseOver={e => !loading && (e.currentTarget.style.background = "rgba(34,197,94,0.08)", e.currentTarget.style.borderColor = "rgba(34,197,94,0.3)")}
-          onMouseOut={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)", e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+          onMouseOver={e => {
+            if (!loading) {
+              e.currentTarget.style.background = "rgba(34,197,94,0.08)";
+              e.currentTarget.style.borderColor = "rgba(34,197,94,0.3)";
+            }
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+          }}
         >
           <RefreshCw size={15} color="#4ade80" style={{ animation: loading ? "spin 0.7s linear infinite" : "none" }} />
           <span>Refresh Data</span>
@@ -79,8 +88,16 @@ export default function ControlPanel({
             transition: "all 0.2s", position: "relative", overflow: "hidden",
             width: "100%", textAlign: "left",
           }}
-          onMouseOver={e => !optimizing && (e.currentTarget.style.background = "rgba(168,85,247,0.2)", e.currentTarget.style.borderColor = "rgba(168,85,247,0.6)")}
-          onMouseOut={e => (e.currentTarget.style.background = "rgba(168,85,247,0.1)", e.currentTarget.style.borderColor = "rgba(168,85,247,0.35)")}
+          onMouseOver={e => {
+            if (!optimizing) {
+              e.currentTarget.style.background = "rgba(168,85,247,0.2)";
+              e.currentTarget.style.borderColor = "rgba(168,85,247,0.6)";
+            }
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.background = "rgba(168,85,247,0.1)";
+            e.currentTarget.style.borderColor = "rgba(168,85,247,0.35)";
+          }}
         >
           <Route size={15} color="#c084fc" />
           <span>{optimizing ? "Computing optimal route…" : "Optimize Route"}</span>
@@ -102,11 +119,46 @@ export default function ControlPanel({
             cursor: "pointer", transition: "all 0.2s",
             width: "100%", textAlign: "left",
           }}
-          onMouseOver={e => (e.currentTarget.style.background = "rgba(239,68,68,0.12)", e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)")}
-          onMouseOut={e => (e.currentTarget.style.background = "rgba(239,68,68,0.04)", e.currentTarget.style.borderColor = "rgba(239,68,68,0.2)")}
+          onMouseOver={e => {
+            e.currentTarget.style.background = "rgba(239,68,68,0.12)";
+            e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)";
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.background = "rgba(239,68,68,0.04)";
+            e.currentTarget.style.borderColor = "rgba(239,68,68,0.2)";
+          }}
         >
           <Flame size={15} color="#f87171" />
           <span>Simulate Critical Alert</span>
+        </button>
+
+        {/* Predict Toggle */}
+        <button
+          onClick={onTogglePredict}
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "10px 14px", borderRadius: 12,
+            border: showPredictiveMap ? "1px solid rgba(239,68,68,0.6)" : "1px solid rgba(255,255,255,0.08)",
+            background: showPredictiveMap ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
+            color: showPredictiveMap ? "#fca5a5" : "#e5e7eb",
+            fontSize: 13, fontWeight: 500,
+            cursor: "pointer", transition: "all 0.2s",
+            boxShadow: showPredictiveMap ? "0 0 15px rgba(239,68,68,0.2)" : "none",
+            width: "100%", textAlign: "left",
+          }}
+          onMouseOver={e => {
+            if (!showPredictiveMap) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            }
+          }}
+          onMouseOut={e => {
+            if (!showPredictiveMap) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+            }
+          }}
+        >
+          <span style={{ fontSize: 16 }}>⚡</span>
+          <span>{showPredictiveMap ? "Hide Forecast" : "Predict 24h Spillover"}</span>
         </button>
       </div>
 

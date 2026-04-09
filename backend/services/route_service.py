@@ -50,15 +50,31 @@ def get_priority_bins(
     threshold: float = ALERT_THRESHOLD,
 ) -> List[models.BinReading]:
     """
-    Return the *latest* reading for every bin at or above `threshold` with GPS.
+    Return the *latest* reading for every bin that is EITHER 
+    at or above `threshold` OR has a high 24h predictive spillover risk.
     """
+    from services.bin_service import calculate_predictive_risk
+
     all_latest = _get_latest_readings(db)
-    return [
-        r for r in all_latest
-        if r.fill_pct >= threshold
-        and r.latitude is not None
-        and r.longitude is not None
-    ]
+    priority_bins = []
+
+    for r in all_latest:
+        if r.latitude is None or r.longitude is None:
+            continue
+            
+        # 1. Base rule: currently over Threshold
+        is_priority = (r.fill_pct >= threshold)
+        
+        # 2. Hackathon predictive rule: simulated high spillover risk
+        if not is_priority:
+            risk = calculate_predictive_risk(r.bin_id, r.fill_pct)
+            if risk >= 80:
+                is_priority = True
+
+        if is_priority:
+            priority_bins.append(r)
+
+    return priority_bins
 
 
 def get_all_bins_with_coords(db: Session) -> List[models.BinReading]:

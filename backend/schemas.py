@@ -60,3 +60,19 @@ class RouteResponse(BaseModel):
     distances:                List[float]  # per-leg distances (km) for the optimised route
     optimized_distance_km:    float        # TSP-optimal distance (critical bins only)
     unoptimized_distance_km:  float        # naive sequential distance (ALL city bins)
+
+
+# ─────────────────────────────────────────────
+#  AI Predictive Heuristics schemas
+# ─────────────────────────────────────────────
+
+class BinPredictItem(BaseModel):
+    bin_id: str
+    fill_pct: float
+    latitude: Optional[float]
+    longitude: Optional[float]
+    spillover_risk: int  # 0 to 100 percentage
+
+
+class BinPredictResponse(BaseModel):
+    predictions: List[BinPredictItem]
