@@ -152,24 +152,30 @@ function AnimatedTruck({ routeCoords }) {
 }
 
 /* ── Map Legend overlay ─────────────────────────────────── */
+/* ── Updated Map Legend in MapView.jsx ─────────────────── */
 function MapLegend({ threshold = 70 }) {
   return (
-    <div className="map-legend">
-      <p className="map-legend__title">
-        LEGEND
+    <div className="absolute bottom-6 left-6 z-[1000] glass-panel bg-slate-950/90 p-4 min-w-[160px] border-white/10 shadow-2xl pointer-events-none slide-in">
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 border-b border-white/5 pb-2">
+        Legend
       </p>
-      {[
-        { color: "#3b82f6", label: "Dumpyard Depot" },
-        { color: "#22c55e", label: `Normal  (<${threshold - 30}%)` },
-        { color: "#f59e0b", label: `Warning (${threshold - 30}–${threshold}%)` },
-        { color: "#ef4444", label: `Critical (>${threshold}%)` },
-        { color: "#a855f7", label: "Route path" },
-      ].map(({ color, label }) => (
-        <div key={label} className="map-legend__item">
-          <span className="map-legend__dot" style={{ background: color, boxShadow: `0 0 5px ${color}88` }} />
-          <span className="text-[11px] text-gray-300">{label}</span>
-        </div>
-      ))}
+      <div className="space-y-2.5">
+        {[
+          { color: "var(--color-blue)", label: "Depot", glow: "0 0 8px #3b82f6" },
+          { color: "var(--color-green)", label: `Normal (<${threshold - 30}%)`, glow: "0 0 8px #00f5a0" },
+          { color: "var(--color-amber)", label: `Warning (<${threshold}%)`, glow: "0 0 8px #ffb800" },
+          { color: "var(--color-red)", label: `Critical (>${threshold}%)`, glow: "0 0 8px #ff4d4d" },
+          { color: "var(--color-purple)", label: "Route Path", glow: "0 0 12px #7000ff" },
+        ].map(({ color, label, glow }) => (
+          <div key={label} className="flex items-center gap-3">
+            <span 
+              className="w-2 h-2 rounded-full" 
+              style={{ background: color, boxShadow: glow }} 
+            />
+            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-tight">{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -229,7 +235,7 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
         <FitBounds route={route} locations={locations} />
       </MapContainer>
 
-      <MapLegend />
+      <MapLegend threshold={threshold} />
     </div>
   );
 }
