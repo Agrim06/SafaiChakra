@@ -106,8 +106,8 @@ function AnimatedTruck({ routeCoords }) {
     segRef.current = 0;
     setTruckPos(routeCoords[0]);
 
-    const STEPS_PER_SEG = 3;  // low steps per segment since OSRM returns hundreds of micro-segments
-    const INTERVAL_MS = 10; // blazing fast ~60fps tick
+    const STEPS_PER_SEG = 5;  // slower, more fluid animation
+    const INTERVAL_MS = 20;   // ~50fps for smoother motion
 
     const id = setInterval(() => {
       const seg = stepRef.current;
@@ -250,7 +250,7 @@ export default function MapView({ route, optimizing, status, statuses, threshold
   const center = locations["DEPOT_00"] || [12.3106, 76.6450];
 
   const routeCoords = route ? route.map((id) => locations[id]).filter(Boolean) : [];
-  const routeSignature = route ? route.join(",") : "";
+  const routeSignature = route ? route.join("-") : "no-route";
   const [roadPath, setRoadPath] = useState(null);
 
   // Hook to fetch real-world road geometries from OSRM when the route sequence changes

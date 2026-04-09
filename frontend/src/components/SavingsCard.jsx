@@ -89,7 +89,7 @@ export default function SavingsCard({ routeData }) {
           <div>
             <p className="text-[13px] font-bold text-white m-0">Efficiency Savings</p>
             <p className="text-[11px] text-gray-500 m-0">
-              {s.stops} critical of {s.totalCityBins} total bins · OR-Tools TSP
+              {s.stops} critical bins · <strong>Closed-loop City Circuit</strong> (incl. return)
             </p>
           </div>
         </div>

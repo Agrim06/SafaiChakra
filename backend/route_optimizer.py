@@ -129,22 +129,24 @@ def optimize_route(
     leg_distances: List[float] = []
 
     index = routing.Start(0)
-    prev_node: int | None = None
 
+    # Standard traversal: from start to just before the end node
     while not routing.IsEnd(index):
         node = manager.IndexToNode(index)
         ordered_ids.append(bin_ids[node])
 
-        if prev_node is not None:
-            leg_km = distance_matrix[prev_node][node] / 1000.0
-            leg_distances.append(round(leg_km, 4))
+        next_index = solution.Value(routing.NextVar(index))
+        # Note: IndexToNode on the End index will return Node 0 (depot)
+        next_node  = manager.IndexToNode(next_index)
 
-        prev_node = node
-        index = solution.Value(routing.NextVar(index))
+        # Distance from current node to next node
+        dist_m = distance_matrix[node][next_node]
+        leg_distances.append(round(dist_m / 1000.0, 4))
 
-    # Last leg back to depot (closed-loop; omit if you want open route)
-    # We return an open route – no return-to-depot leg appended.
-    if prev_node is not None and len(ordered_ids) > 1:
-        leg_distances.append(0.0)  # sentinel for last stop
+        index = next_index
+
+    # Add the final closing node (node 0) to complete the loop
+    # In OR-Tools for single vehicle TSP, index at this point is the end node index
+    ordered_ids.append(bin_ids[0])
 
     return ordered_ids, leg_distances
