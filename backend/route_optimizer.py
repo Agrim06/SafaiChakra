@@ -25,7 +25,66 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 import requests
 
-def _build_haversine_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]:
+def _intersects(p1, p2, p3, p4):
+    def ccw(A, B, C):
+        return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+    return ccw(p1, p3, p4) != ccw(p2, p3, p4) and ccw(p1, p2, p3) != ccw(p1, p2, p4)
+
+def _dist_km(p1, p2):
+    return _haversine_km(p1[0], p1[1], p2[0], p2[1])
+
+def _dist_to_segment(p, a, b):
+    # Minimum distance from point p to segment a-b in km
+    lat_p, lon_p = p
+    lat_a, lon_a = a
+    lat_b, lon_b = b
+    
+    # 2D projection approach (approximate for city scale)
+    l2 = (lat_b - lat_a)**2 + (lon_b - lon_a)**2
+    if l2 == 0: return _dist_km(p, a)
+    t = max(0, min(1, ((lat_p - lat_a) * (lat_b - lat_a) + (lon_p - lon_a) * (lon_b - lon_a)) / l2))
+    projection = (lat_a + t * (lat_b - lat_a), lon_a + t * (lon_b - lon_a))
+    return _dist_km(p, projection)
+
+def _leg_intersects_traffic(start_coord, end_coord, traffic_lines, buffer_km=0.15):
+    """
+    Returns the cumulative penalty for a leg.
+       - Each exact intersection: +2,000,000 (2000 km penalty)
+       - Proximity to any segment: +50,000 (50 km penalty)
+    """
+    if not traffic_lines:
+        return 0
+        
+    p1 = (start_coord[0], start_coord[1])
+    p2 = (end_coord[0], end_coord[1])
+    
+    total_penalty = 0
+    
+    for line in traffic_lines:
+        pts = line
+        if len(pts) < 2: continue
+        
+        line_has_buffer_penalty = False
+        
+        for i in range(len(pts) - 1):
+            p3, p4 = pts[i], pts[i+1]
+            
+            # 1. Exact Intersection check
+            if _intersects(p1, p2, p3, p4):
+                total_penalty += 2000000 
+                
+            # 2. Buffer check (150m)
+            if not line_has_buffer_penalty:
+                mid = ((p1[0]+p2[0])/2, (p1[1]+p2[1])/2)
+                if (_dist_to_segment(p1, p3, p4) < buffer_km or 
+                    _dist_to_segment(p2, p3, p4) < buffer_km or 
+                    _dist_to_segment(mid, p3, p4) < buffer_km):
+                    total_penalty += 50000
+                    line_has_buffer_penalty = True
+
+    return total_penalty
+
+def _build_haversine_matrix(coords: List[Tuple[float, float]], traffic_lines: List[List[List[float]]] = None) -> List[List[int]]:
     n = len(coords)
     matrix: List[List[int]] = []
     for i in range(n):
@@ -35,11 +94,19 @@ def _build_haversine_matrix(coords: List[Tuple[float, float]]) -> List[List[int]
                 row.append(0)
             else:
                 km = _haversine_km(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
-                row.append(int(km * 1000))
+                cost = int(km * 1000)
+                if traffic_lines:
+                    penalty = _leg_intersects_traffic(coords[i], coords[j], traffic_lines)
+                    if penalty > 0:
+                        cost += penalty
+                        label = "CROSS" if penalty >= 2000000 else "NEAR"
+                        # Show which bins are blocked
+                        print(f"[TSP] {label} PENALTY applied to path segment.")
+                row.append(cost)
         matrix.append(row)
     return matrix
 
-def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]:
+def _build_distance_matrix(coords: List[Tuple[float, float]], traffic_lines: List[List[List[float]]] = None) -> List[List[int]]:
     """
     Build an integer distance matrix (in metres) from a list of (lat, lon) tuples.
     Attempts to fetch real-world driving distances from OSRM. 
@@ -58,15 +125,25 @@ def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]
         data = resp.json()
         if data.get("code") == "Ok" and "distances" in data:
             matrix = []
-            for row in data["distances"]:
+            for i, row in enumerate(data["distances"]):
+                modified_row = []
                 # the OSRM table API returns distances in float meters
-                matrix.append([int(d) for d in row])
-            print("[TSP] Using real-world OSRM driving distance matrix.")
+                for j, d in enumerate(row):
+                    cost = int(d)
+                    if i != j and traffic_lines:
+                        penalty = _leg_intersects_traffic(coords[i], coords[j], traffic_lines)
+                        if penalty > 0:
+                            cost += penalty
+                            label = "CROSS" if penalty >= 2000000 else "NEAR"
+                            print(f"[TSP] {label} {i}->{j} detected.")
+                    modified_row.append(cost)
+                matrix.append(modified_row)
+            print("[TSP] Using real-world OSRM driving distance matrix (with traffic penalties).")
             return matrix
     except Exception as e:
         print("[TSP] OSRM Table API failed, falling back to Haversine:", e)
         
-    return _build_haversine_matrix(coords)
+    return _build_haversine_matrix(coords, traffic_lines)
 
 
 # ── public API ───────────────────────────────────────────────────────────────
@@ -75,6 +152,7 @@ def optimize_route(
     bin_ids: List[str],
     coords:  List[Tuple[float, float]],   # (latitude, longitude) per bin
     time_limit_seconds: int = 10,
+    traffic_lines: List[List[List[float]]] = None,
 ) -> Tuple[List[str], List[float]]:
     """
     Solve TSP and return:
@@ -90,7 +168,7 @@ def optimize_route(
     if n == 1:
         return bin_ids, [0.0]
 
-    distance_matrix = _build_distance_matrix(coords)
+    distance_matrix = _build_distance_matrix(coords, traffic_lines)
 
     # ── OR-Tools setup ───────────────────────────────────────────────────────
     manager = pywrapcp.RoutingIndexManager(

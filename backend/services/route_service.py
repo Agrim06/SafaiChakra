@@ -83,7 +83,7 @@ def get_all_bins_with_coords(db: Session) -> List[models.BinReading]:
     return [r for r in all_latest if r.latitude is not None and r.longitude is not None]
 
 
-def compute_route(db: Session, threshold: float = ALERT_THRESHOLD) -> RouteResponse:
+def compute_route(db: Session, threshold: float = ALERT_THRESHOLD, traffic_lines: List[List[List[float]]] = None) -> RouteResponse:
     """
     High-level entry point: fetch priority bins → optimise → return RouteResponse.
 
@@ -144,7 +144,7 @@ def compute_route(db: Session, threshold: float = ALERT_THRESHOLD) -> RouteRespo
     bin_ids.extend([b.bin_id for b in priority_bins])
     coords.extend([(b.latitude, b.longitude) for b in priority_bins])
 
-    ordered_ids, leg_distances = optimize_route(bin_ids, coords)
+    ordered_ids, leg_distances = optimize_route(bin_ids, coords, traffic_lines=traffic_lines)
 
     # Optimized: sum of OR-Tools leg distances
     optimized_km = round(sum(d for d in leg_distances), 3)

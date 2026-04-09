@@ -19,6 +19,31 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
 });
 
+/**
+ * Resilient OSRM fetching with protocol fallback and retry.
+ * Helps overcome ConnectionResetErrors and rate-limiting.
+ */
+async function fetchOSRM(coordString, retry = true) {
+  const protocols = ['https', 'http'];
+  for (const protocol of protocols) {
+    try {
+      const url = `${protocol}://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`OSRM Status ${r.status}`);
+      const data = await r.json();
+      if (data.code === 'Ok' && data.routes && data.routes[0]) return data;
+      throw new Error(data.code || 'No routes found');
+    } catch (err) {
+      console.warn(`[OSRM] ${protocol} attempt failed:`, err.message);
+    }
+  }
+  if (retry) {
+    await new Promise(res => setTimeout(res, 1000));
+    return fetchOSRM(coordString, false);
+  }
+  throw new Error('OSRM mapping failed after fallback and retry');
+}
+
 /* ── Icons ─────────────────────────────────────────────── */
 const makeIcon = (color, pulse = false) =>
   L.divIcon({
@@ -228,8 +253,20 @@ function MapScribbler({ scribbleMode, onScribble, onScribbleEnd }) {
   return null;
 }
 
+/* ── Route stop number marker ───────────────────────────── */
+function makeStopIcon(num, isTrafficAware) {
+  const bg = isTrafficAware ? '#b91c1c' : '#7c3aed';
+  const html = `<div style="
+    background:${bg};color:white;border-radius:50%;width:22px;height:22px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800;border:2px solid white;
+    box-shadow:0 0 6px rgba(0,0,0,0.5);">${num}</div>`;
+  return L.divIcon({ html, className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
+}
+
 /* ── Shared map canvas ─────────────────────────────────── */
 function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH, threshold, showPredictiveMap, predictiveData, trafficLines, scribbleMode, onScribble, onScribbleEnd }) {
+  const hasTraffic = trafficLines && trafficLines.length > 0;
   return (
     <div className="map-card__body h-full" style={{ minHeight: bodyH }}>
       <MapContainer
@@ -310,6 +347,22 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
         {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#7c3aed" weight={8} opacity={0.25} />}
         {routeCoords.length > 1 && !optimizing && <AnimatedTruck routeCoords={routeCoords} />}
 
+        {/* Numbered stop order markers — visible route sequence */}
+        {route && route.map((id, idx) => {
+          const pos = locations[id];
+          if (!pos || id === 'DEPOT_00') return null;
+          return (
+            <Marker key={`stop-${id}`} position={pos} icon={makeStopIcon(idx, hasTraffic)} zIndexOffset={500}>
+              <Popup>
+                <div>
+                  <p className="font-bold text-[13px]">Stop #{idx}: {id}</p>
+                  {hasTraffic && <p className="text-red-400 text-[11px] mt-1">🚦 Traffic-aware sequence</p>}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
         {/* Render Traffic Lines */}
         {trafficLines && trafficLines.map((line, idx) => (
           <Polyline
@@ -332,10 +385,9 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
 }
 
 /* ── Main component ─────────────────────────────────────── */
-export default function MapView({ route, optimizing, status, statuses, threshold = 70, showPredictiveMap, predictiveData }) {
+export default function MapView({ route, optimizing, status, statuses, threshold = 70, showPredictiveMap, predictiveData, trafficLines, setTrafficLines }) {
   const [expanded, setExpanded] = useState(false);
   const [scribbleMode, setScribbleMode] = useState(false);
-  const [trafficLines, setTrafficLines] = useState([]);
 
   const handleScribble = useCallback((coord, isNewStroke) => {
     setTrafficLines(prev => {
@@ -349,6 +401,7 @@ export default function MapView({ route, optimizing, status, statuses, threshold
         return newLines;
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleScribbleEnd = useCallback(() => {
@@ -360,47 +413,31 @@ export default function MapView({ route, optimizing, status, statuses, threshold
 
       if (stroke.length < 2) return prev;
 
-      // Downsample stroke to max 20 points to fit OSRM route limits (25 max)
-      // This forces the street-snapping to actually follow their curved path!
       const maxPoints = 20;
       let sampled = [];
       const step = Math.max(1, Math.floor(stroke.length / maxPoints));
-      for (let i = 0; i < stroke.length; i += step) {
-        sampled.push(stroke[i]);
-      }
-      if (sampled[sampled.length - 1] !== stroke[stroke.length - 1]) {
-        sampled.push(stroke[stroke.length - 1]);
-      }
+      for (let i = 0; i < stroke.length; i += step) sampled.push(stroke[i]);
+      if (sampled[sampled.length - 1] !== stroke[stroke.length - 1]) sampled.push(stroke[stroke.length - 1]);
 
       const coordString = sampled.map(c => `${c[1]},${c[0]}`).join(";");
-      const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
-
-      fetch(url)
-        .then(r => r.json())
+      
+      fetchOSRM(coordString)
         .then(data => {
-          if (data.routes && data.routes[0]) {
-            const snappedPath = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-            setTrafficLines(current => {
-              const newLines = [...current];
-              if (newLines[targetIdx]) {
-                newLines[targetIdx] = { ...newLines[targetIdx], positions: snappedPath, status: 'snapped' };
-              }
-              return newLines;
-            });
-          } else {
-            setTrafficLines(current => {
-              const newLines = [...current];
-              if (newLines[targetIdx]) {
-                newLines[targetIdx] = { ...newLines[targetIdx], status: 'snapped' };
-              }
-              return newLines;
-            });
-          }
-        }).catch(() => {
+          const snappedPath = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
           setTrafficLines(current => {
             const newLines = [...current];
             if (newLines[targetIdx]) {
-              newLines[targetIdx] = { ...newLines[targetIdx], status: 'snapped' };
+              newLines[targetIdx] = { ...newLines[targetIdx], positions: snappedPath, status: 'snapped' };
+            }
+            return newLines;
+          });
+        })
+        .catch(err => {
+          console.error("[Traffic Snap Error]", err);
+          setTrafficLines(current => {
+            const newLines = [...current];
+            if (newLines[targetIdx]) {
+              newLines[targetIdx] = { ...newLines[targetIdx], status: 'snapped' }; // Keep raw if failed
             }
             return newLines;
           });
@@ -408,6 +445,7 @@ export default function MapView({ route, optimizing, status, statuses, threshold
 
       return prev;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close on Escape key
@@ -423,38 +461,99 @@ export default function MapView({ route, optimizing, status, statuses, threshold
 
   const routeCoords = route ? route.map((id) => locations[id]).filter(Boolean) : [];
   const routeSignature = route ? route.join("-") : "no-route";
+  // Only re-trigger road fetch when fully snapped lines change (never during mouse-move drawing)
+  const trafficSignature = trafficLines
+    ? trafficLines.filter(l => l.status === 'snapped').map(l => l.positions.length).join('|')
+    : '0';
   const [roadPath, setRoadPath] = useState(null);
 
-  // Hook to fetch real-world road geometries from OSRM when the route sequence changes
+  // ── Helpers for detour calculation ─────────────────────────────────────────
+  function segmentsIntersect(p1, p2, p3, p4) {
+    const ccw = (A, B, C) => (C[1]-A[1])*(B[0]-A[0]) > (B[1]-A[1])*(C[0]-A[0]);
+    return ccw(p1,p3,p4) !== ccw(p2,p3,p4) && ccw(p1,p2,p3) !== ccw(p1,p2,p4);
+  }
+
+  function getDetourWaypoint(from, to, trafficSegs) {
+    for (const seg of trafficSegs) {
+      if (segmentsIntersect(from, to, seg[0], seg[1])) {
+        // Perpendicular vector to the traffic segment
+        const dx = seg[1][0] - seg[0][0];
+        const dy = seg[1][1] - seg[0][1];
+        const len = Math.sqrt(dx*dx + dy*dy) || 1;
+        const perpLat = -dy / len;
+        const perpLon =  dx / len;
+        // Tight 300m offset to signal OSRM without causing hallucinations
+        const offset = 0.003;
+        // Use the midpoint of the route LEG (or specific intersection) as basis
+        const midLat = (from[0] + to[0]) / 2;
+        const midLon = (from[1] + to[1]) / 2;
+        // Two candidate detour points (either side of the traffic line)
+        const cand1 = [midLat + perpLat * offset, midLon + perpLon * offset];
+        const cand2 = [midLat - perpLat * offset, midLon - perpLon * offset];
+        // Pick the candidate that does NOT re-cross the traffic line from `from`
+        const cross1 = segmentsIntersect(from, cand1, seg[0], seg[1]);
+        const chosen = cross1 ? cand2 : cand1;
+        return chosen;
+      }
+    }
+    return null;
+  }
+
+  // Hook to fetch real-world road geometries from OSRM when the route or traffic changes
+
+  // Hook to fetch real-world road geometries from OSRM when the route or traffic changes
   useEffect(() => {
     if (!route || route.length < 2) {
       setRoadPath(null);
       return;
     }
-    const coords = route.map(id => locations[id]).filter(Boolean);
-    if (coords.length < 2) return;
+    const binCoords = route.map(id => locations[id]).filter(Boolean);
+    if (binCoords.length < 2) return;
 
-    // Use OSRM public API to snap to roads (format: lon,lat;lon,lat...)
-    const coordString = coords.map(c => `${c[1]},${c[0]}`).join(";");
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
-
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (data.routes && data.routes[0]) {
-          // OSRM returns GeoJSON [lon, lat], Leaflet wants [lat, lon]
-          const path = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-          setRoadPath(path);
-        } else {
-          setRoadPath(coords); // Fallback to straight lines if routing fails
+    // Build all traffic line segments (pairs of consecutive points)
+    const trafficSegs = [];
+    if (trafficLines) {
+      for (const line of trafficLines) {
+        const pts = line.positions || line;
+        if (!pts || pts.length < 2) continue;
+        for (let i = 0; i < pts.length - 1; i++) {
+          trafficSegs.push([pts[i], pts[i+1]]);
         }
+      }
+    }
+
+    console.log('[Route] Traffic segs:', trafficSegs.length, '| Bin coords:', binCoords.length);
+
+    // Build waypoint list, injecting detour points for traffic-crossing legs
+    const waypointCoords = [];
+    for (let i = 0; i < binCoords.length; i++) {
+      waypointCoords.push(binCoords[i]);
+      if (i < binCoords.length - 1 && trafficSegs.length > 0) {
+        const detour = getDetourWaypoint(binCoords[i], binCoords[i+1], trafficSegs);
+        if (detour) {
+          waypointCoords.push(detour);
+        }
+      }
+    }
+    console.log('[Route] Final waypoints:', waypointCoords.length, '(', binCoords.length, 'bins +', waypointCoords.length - binCoords.length, 'detours)');
+
+    // Clamp to OSRM's 25-waypoint limit
+    const limited = waypointCoords.slice(0, 25);
+
+    // Use resilient OSRM fetcher
+    const coordString = limited.map(c => `${c[1]},${c[0]}`).join(";");
+    
+    fetchOSRM(coordString)
+      .then(data => {
+        const path = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        setRoadPath(path);
       })
-      .catch(e => {
-        console.error("OSRM Error:", e);
-        setRoadPath(coords);
+      .catch(err => {
+        console.warn("[Route OSRM Error]:", err.message);
+        setRoadPath(binCoords);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeSignature]);
+  }, [routeSignature, trafficSignature]);
 
   // Use the fetched road path, or fall back to point-to-point lines while loading
   const displayPath = roadPath || routeCoords;
@@ -468,7 +567,14 @@ export default function MapView({ route, optimizing, status, statuses, threshold
         </div>
         <div>
           <p className="text-[13px] font-bold text-white m-0">Live City Map — Mysuru</p>
-          <p className="text-[11px] text-gray-500 m-0">Bin locations &amp; optimized route</p>
+          <p className="text-[11px] text-gray-500 m-0">
+            Bin locations &amp; optimized route
+            {trafficLines && trafficLines.length > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-red-400 font-bold animate-pulse">
+                🚦 Traffic-Aware
+              </span>
+            )}
+          </p>
         </div>
       </div>
 

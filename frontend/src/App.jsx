@@ -29,6 +29,7 @@ export default function App() {
   // Hackathon AI Feature
   const [showPredictiveMap, setShowPredictiveMap] = useState(false);
   const [predictiveData, setPredictiveData]       = useState(null);
+  const [trafficLines, setTrafficLines]           = useState([]);
 
   // ── 1. Fetch all known bins ───────────────────────────────────────────────
   const fetchAllBins = useCallback(async () => {
@@ -127,10 +128,19 @@ export default function App() {
   const handleOptimize = async () => {
     setOptimizing(true);
     try {
-      const res = await axios.get(
-        `${API_BASE}/optimize-route?threshold=${threshold}`
+      const snappedLines = trafficLines.filter(l => l.status === 'snapped').map(l => l.positions);
+      const allLines = trafficLines.map(l => l.positions);
+      const payload = {
+        threshold: Number(threshold),
+        traffic_lines: snappedLines.length > 0 ? snappedLines : allLines
+      };
+      console.log('[Optimize] trafficLines state:', trafficLines);
+      console.log('[Optimize] Sending traffic_lines count:', payload.traffic_lines.length);
+      const res = await axios.post(
+        `${API_BASE}/optimize-route`,
+        payload
       );
-      setRouteData(res.data);   // store full response with distances
+      setRouteData(res.data);
       setError(null);
     } catch (err) {
       setError("Route optimisation failed — is the backend running?");
@@ -300,6 +310,8 @@ export default function App() {
               threshold={threshold}
               showPredictiveMap={showPredictiveMap}
               predictiveData={predictiveData}
+              trafficLines={trafficLines}
+              setTrafficLines={setTrafficLines}
             />
 
             <SavingsCard routeData={routeData} />

@@ -53,6 +53,10 @@ class BinHistoryItem(BaseModel):
 #  Route Optimization schemas
 # ─────────────────────────────────────────────
 
+class RouteRequest(BaseModel):
+    threshold: Optional[float] = Field(None, ge=0, le=100, json_schema_extra={"example": 70.0})
+    traffic_lines: List[List[List[float]]] = Field(default_factory=list, json_schema_extra={"example": [[[12.9, 77.5], [12.91, 77.51]]]})
+
 class RouteResponse(BaseModel):
     route:                    List[str]
     total_bins:               int    # critical bins being collected this run
