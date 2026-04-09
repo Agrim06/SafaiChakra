@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   MapContainer,
@@ -10,7 +10,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Map, Maximize2, X } from "lucide-react";
+import { Map, Maximize2, X, PenTool, Eraser } from "lucide-react";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -175,8 +175,61 @@ function MapLegend({ threshold = 70 }) {
   );
 }
 
+/* ── Map Scribbler (Traffic Area Drawing) ───────────────── */
+function MapScribbler({ scribbleMode, onScribble, onScribbleEnd }) {
+  const map = useMap();
+  const stateRef = useRef({ isDrawing: false, mode: scribbleMode, onScribble, onScribbleEnd });
+
+  useEffect(() => {
+    stateRef.current.mode = scribbleMode;
+    stateRef.current.onScribble = onScribble;
+    stateRef.current.onScribbleEnd = onScribbleEnd;
+    if (!scribbleMode) {
+      map.dragging.enable();
+      stateRef.current.isDrawing = false;
+    }
+  }, [scribbleMode, onScribble, onScribbleEnd, map]);
+
+  useEffect(() => {
+    const handleDown = (e) => {
+      // Leaflet mousedown bypasses normal react limits
+      if (!stateRef.current.mode) return;
+      map.dragging.disable();
+      stateRef.current.isDrawing = true;
+      stateRef.current.onScribble([e.latlng.lat, e.latlng.lng], true);
+    };
+
+    const handleMove = (e) => {
+      if (!stateRef.current.mode || !stateRef.current.isDrawing) return;
+      stateRef.current.onScribble([e.latlng.lat, e.latlng.lng], false);
+    };
+
+    const handleUp = () => {
+      if (!stateRef.current.mode) return;
+      if (stateRef.current.isDrawing && stateRef.current.onScribbleEnd) {
+        stateRef.current.onScribbleEnd();
+      }
+      map.dragging.enable();
+      stateRef.current.isDrawing = false;
+    };
+
+    // Use native leaflet listener events which are highly stable
+    map.on('mousedown', handleDown);
+    map.on('mousemove', handleMove);
+    map.on('mouseup', handleUp);
+
+    return () => {
+      map.off('mousedown', handleDown);
+      map.off('mousemove', handleMove);
+      map.off('mouseup', handleUp);
+    };
+  }, [map]);
+
+  return null;
+}
+
 /* ── Shared map canvas ─────────────────────────────────── */
-function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH, threshold, showPredictiveMap, predictiveData }) {
+function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords, bodyH, threshold, showPredictiveMap, predictiveData, trafficLines, scribbleMode, onScribble, onScribbleEnd }) {
   return (
     <div className="map-card__body h-full" style={{ minHeight: bodyH }}>
       <MapContainer
@@ -257,6 +310,19 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
         {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#7c3aed" weight={8} opacity={0.25} />}
         {routeCoords.length > 1 && !optimizing && <AnimatedTruck routeCoords={routeCoords} />}
 
+        {/* Render Traffic Lines */}
+        {trafficLines && trafficLines.map((line, idx) => (
+          <Polyline
+            key={`traffic-${idx}`}
+            positions={line.positions}
+            color="#8B0000"
+            weight={10}
+            opacity={0.9}
+          />
+        ))}
+        {/* Event interceptor for drawing traffic */}
+        <MapScribbler scribbleMode={scribbleMode} onScribble={onScribble} onScribbleEnd={onScribbleEnd} />
+
         <FitBounds route={route} locations={locations} />
       </MapContainer>
 
@@ -268,6 +334,81 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
 /* ── Main component ─────────────────────────────────────── */
 export default function MapView({ route, optimizing, status, statuses, threshold = 70, showPredictiveMap, predictiveData }) {
   const [expanded, setExpanded] = useState(false);
+  const [scribbleMode, setScribbleMode] = useState(false);
+  const [trafficLines, setTrafficLines] = useState([]);
+
+  const handleScribble = useCallback((coord, isNewStroke) => {
+    setTrafficLines(prev => {
+      if (isNewStroke) {
+        return [...prev, { positions: [coord], status: 'drawing' }];
+      } else {
+        if (prev.length === 0) return prev;
+        const newLines = [...prev];
+        const lastLine = newLines[newLines.length - 1];
+        newLines[newLines.length - 1] = { ...lastLine, positions: [...lastLine.positions, coord] };
+        return newLines;
+      }
+    });
+  }, []);
+
+  const handleScribbleEnd = useCallback(() => {
+    setTrafficLines(prev => {
+      if (prev.length === 0) return prev;
+      const targetIdx = prev.length - 1;
+      const strokeObj = prev[targetIdx];
+      const stroke = strokeObj.positions;
+
+      if (stroke.length < 2) return prev;
+
+      // Downsample stroke to max 20 points to fit OSRM route limits (25 max)
+      // This forces the street-snapping to actually follow their curved path!
+      const maxPoints = 20;
+      let sampled = [];
+      const step = Math.max(1, Math.floor(stroke.length / maxPoints));
+      for (let i = 0; i < stroke.length; i += step) {
+        sampled.push(stroke[i]);
+      }
+      if (sampled[sampled.length - 1] !== stroke[stroke.length - 1]) {
+        sampled.push(stroke[stroke.length - 1]);
+      }
+
+      const coordString = sampled.map(c => `${c[1]},${c[0]}`).join(";");
+      const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
+
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          if (data.routes && data.routes[0]) {
+            const snappedPath = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            setTrafficLines(current => {
+              const newLines = [...current];
+              if (newLines[targetIdx]) {
+                newLines[targetIdx] = { ...newLines[targetIdx], positions: snappedPath, status: 'snapped' };
+              }
+              return newLines;
+            });
+          } else {
+            setTrafficLines(current => {
+              const newLines = [...current];
+              if (newLines[targetIdx]) {
+                newLines[targetIdx] = { ...newLines[targetIdx], status: 'snapped' };
+              }
+              return newLines;
+            });
+          }
+        }).catch(() => {
+          setTrafficLines(current => {
+            const newLines = [...current];
+            if (newLines[targetIdx]) {
+              newLines[targetIdx] = { ...newLines[targetIdx], status: 'snapped' };
+            }
+            return newLines;
+          });
+        });
+
+      return prev;
+    });
+  }, []);
 
   // Close on Escape key
   useEffect(() => {
@@ -332,6 +473,24 @@ export default function MapView({ route, optimizing, status, statuses, threshold
       </div>
 
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => setScribbleMode(v => !v)}
+          title="Draw Traffic Zones"
+          className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded shadow-sm transition-all border ${scribbleMode ? 'bg-red-500 text-white border-red-600' : 'bg-[#1f2937] text-gray-300 border-gray-600 hover:bg-gray-700'}`}
+        >
+          <PenTool size={12} />
+          {scribbleMode ? "Traffic Mode: ON" : "Draw Traffic"}
+        </button>
+        {trafficLines.length > 0 && (
+          <button
+            onClick={() => setTrafficLines([])}
+            className="flex items-center justify-center p-1.5 rounded bg-[#1f2937] text-gray-300 border border-gray-600 hover:bg-gray-700 hover:text-white"
+            title="Clear Traffic"
+          >
+            <Eraser size={12} />
+          </button>
+        )}
+
         {optimizing && (
           <span className="map-badge map-badge--computing">⚙ Computing…</span>
         )}
@@ -350,11 +509,10 @@ export default function MapView({ route, optimizing, status, statuses, threshold
         <button
           onClick={() => setExpanded(v => !v)}
           title={modal ? "Close fullscreen (Esc)" : "Fullscreen map"}
-          className={`flex items-center justify-center w-7.5 h-7.5 rounded-lg border transition-all shrink-0 ${
-            modal 
-              ? 'bg-red-500/10 border-red-500/30 text-red-400' 
-              : 'bg-white/5 border-white/10 text-gray-400'
-          }`}
+          className={`flex items-center justify-center w-7.5 h-7.5 rounded-lg border transition-all shrink-0 ${modal
+            ? 'bg-red-500/10 border-red-500/30 text-red-400'
+            : 'bg-white/5 border-white/10 text-gray-400'
+            }`}
         >
           {modal ? <X size={13} /> : <Maximize2 size={13} />}
         </button>
@@ -370,6 +528,7 @@ export default function MapView({ route, optimizing, status, statuses, threshold
         center={center} route={route} optimizing={optimizing}
         statuses={statuses} locations={locations} routeCoords={displayPath}
         bodyH={480} threshold={threshold} showPredictiveMap={showPredictiveMap} predictiveData={predictiveData}
+        trafficLines={trafficLines} scribbleMode={scribbleMode} onScribble={handleScribble} onScribbleEnd={handleScribbleEnd}
       />
     </div>
   );
@@ -386,6 +545,7 @@ export default function MapView({ route, optimizing, status, statuses, threshold
           center={center} route={route} optimizing={optimizing}
           statuses={statuses} locations={locations} routeCoords={displayPath}
           bodyH="calc(94vh - 56px)" threshold={threshold} showPredictiveMap={showPredictiveMap} predictiveData={predictiveData}
+          trafficLines={trafficLines} scribbleMode={scribbleMode} onScribble={handleScribble} onScribbleEnd={handleScribbleEnd}
         />
       </div>
     </div>,
