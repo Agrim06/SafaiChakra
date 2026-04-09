@@ -50,7 +50,7 @@ def _leg_intersects_traffic(start_coord, end_coord, traffic_lines, buffer_km=0.1
     """
     Returns the cumulative penalty for a leg.
        - Each exact intersection: +2,000,000 (2000 km penalty)
-       - Proximity to any segment: +50,000 (50 km penalty)
+       - Proximity to any segment: +5,000 (5 km penalty)
     """
     if not traffic_lines:
         return 0
@@ -79,7 +79,7 @@ def _leg_intersects_traffic(start_coord, end_coord, traffic_lines, buffer_km=0.1
                 if (_dist_to_segment(p1, p3, p4) < buffer_km or 
                     _dist_to_segment(p2, p3, p4) < buffer_km or 
                     _dist_to_segment(mid, p3, p4) < buffer_km):
-                    total_penalty += 50000
+                    total_penalty += 5000
                     line_has_buffer_penalty = True
 
     return total_penalty
@@ -100,8 +100,7 @@ def _build_haversine_matrix(coords: List[Tuple[float, float]], traffic_lines: Li
                     if penalty > 0:
                         cost += penalty
                         label = "CROSS" if penalty >= 2000000 else "NEAR"
-                        # Show which bins are blocked
-                        print(f"[TSP] {label} PENALTY applied to path segment.")
+                        print(f"[TSP] {label} weight applied.")
                 row.append(cost)
         matrix.append(row)
     return matrix
@@ -135,7 +134,7 @@ def _build_distance_matrix(coords: List[Tuple[float, float]], traffic_lines: Lis
                         if penalty > 0:
                             cost += penalty
                             label = "CROSS" if penalty >= 2000000 else "NEAR"
-                            print(f"[TSP] {label} {i}->{j} detected.")
+                            print(f"[TSP] {label} weight {i}->{j} added.")
                     modified_row.append(cost)
                 matrix.append(modified_row)
             print("[TSP] Using real-world OSRM driving distance matrix (with traffic penalties).")

@@ -499,7 +499,16 @@ export default function MapView({ route, optimizing, status, statuses, threshold
     return null;
   }
 
-  // Hook to fetch real-world road geometries from OSRM when the route or traffic changes
+  // Check if a detailed road path intersects any traffic segments
+  function pathIntersects(path, trafficSegs) {
+    if (!path || path.length < 2 || !trafficSegs || trafficSegs.length === 0) return false;
+    for (let i = 0; i < path.length - 1; i++) {
+      for (const seg of trafficSegs) {
+        if (segmentsIntersect(path[i], path[i+1], seg[0], seg[1])) return true;
+      }
+    }
+    return false;
+  }
 
   // Hook to fetch real-world road geometries from OSRM when the route or traffic changes
   useEffect(() => {
@@ -546,7 +555,48 @@ export default function MapView({ route, optimizing, status, statuses, threshold
     fetchOSRM(coordString)
       .then(data => {
         const path = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-        setRoadPath(path);
+        
+        // --- NEW: Stable Road-Aware Detour Pass ---
+        // If the ACTUAL road path still crosses traffic, we need to inject more detours
+        let needsMoreDetours = false;
+        const newWaypoints = [...limited];
+        let offsetCount = 1;
+
+        if (pathIntersects(path, trafficSegs)) {
+          // Check each bin-to-bin leg in the OSRM result
+          for (let i = 0; i < data.waypoints.length - 1; i++) {
+            const startNode = data.waypoints[i].location; // [lon, lat]
+            const endNode = data.waypoints[i+1].location;
+            const p1 = [startNode[1], startNode[0]];
+            const p2 = [endNode[1], endNode[0]];
+            
+            // If this specific leg still crosses, inject a detour
+            const detour = getDetourWaypoint(p1, p2, trafficSegs);
+            if (detour) {
+              // Deduplicate: Don't add if too close to neighbors
+              const lastPt = newWaypoints[i + offsetCount - 1];
+              const dist = Math.sqrt((lastPt[0]-detour[0])**2 + (lastPt[1]-detour[1])**2);
+              if (dist > 0.001) {
+                newWaypoints.splice(i + offsetCount, 0, detour);
+                offsetCount++;
+                needsMoreDetours = true;
+              }
+            }
+          }
+        }
+
+        if (needsMoreDetours) {
+          console.log("[Route] Visual intersection detected! Applying stable detour...");
+          const newCoordString = newWaypoints.slice(0, 25).map(c => `${c[1]},${c[0]}`).join(";");
+          fetchOSRM(newCoordString)
+            .then(data2 => {
+              const finalPath = data2.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+              setRoadPath(finalPath);
+            })
+            .catch(() => setRoadPath(path)); // Fallback
+        } else {
+          setRoadPath(path);
+        }
       })
       .catch(err => {
         console.warn("[Route OSRM Error]:", err.message);
