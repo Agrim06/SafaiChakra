@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   MapContainer,
@@ -92,14 +92,26 @@ function buildLocations(statuses) {
 }
 
 /* ── Auto-fit bounds ────────────────────────────────────── */
-function FitBounds({ route, locations }) {
+function FitBounds({ route, locations, scribbleMode }) {
   const map = useMap();
+  const lastFitSignature = useRef("");
+
   useEffect(() => {
+    // If user is drawing traffic, NEVER fight their zoom/pan
+    if (scribbleMode) return;
+
     // Timeout ensures Flexbox/Grid layouts have fully resolved their dimensions
-    // before Leaflet attempts to calculate the center metric, preventing it
-    // from pinning off-center.
     const timer = setTimeout(() => {
       map.invalidateSize();
+      
+      const routeSignature = route ? route.join("-") : "no-route";
+      const locationsCount = Object.keys(locations).length;
+      const currentSignature = `${routeSignature}_${locationsCount}`;
+
+      // Only auto-fit if the route or bin list actually changed
+      if (currentSignature === lastFitSignature.current) return;
+      lastFitSignature.current = currentSignature;
+
       if (route && route.length > 1) {
         // Focus on active route
         const coords = route.map((id) => locations[id]).filter(Boolean);
@@ -114,9 +126,9 @@ function FitBounds({ route, locations }) {
           map.setView(depotPos, 14);
         }
       }
-    }, 150);
+    }, 300); // Slightly longer delay for stability
     return () => clearTimeout(timer);
-  }, [route, locations, map]);
+  }, [route, locations, map, scribbleMode]);
   return null;
 }
 
@@ -376,7 +388,7 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
         {/* Event interceptor for drawing traffic */}
         <MapScribbler scribbleMode={scribbleMode} onScribble={onScribble} onScribbleEnd={onScribbleEnd} />
 
-        <FitBounds route={route} locations={locations} />
+        <FitBounds route={route} locations={locations} scribbleMode={scribbleMode} />
       </MapContainer>
 
       <MapLegend threshold={threshold} />
@@ -455,7 +467,7 @@ export default function MapView({ route, optimizing, status, statuses, threshold
     return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
-  const locations = buildLocations(statuses);
+  const locations = useMemo(() => buildLocations(statuses), [statuses]);
   // Default map position directly centered at the Dumpyard Depot
   const center = locations["DEPOT_00"] || [12.3106, 76.6450];
 
