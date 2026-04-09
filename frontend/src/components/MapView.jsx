@@ -260,7 +260,7 @@ function MapCanvas({ center, route, optimizing, statuses, locations, routeCoords
         <FitBounds route={route} locations={locations} />
       </MapContainer>
 
-      <MapLegend />
+      <MapLegend threshold={threshold} />
     </div>
   );
 }
