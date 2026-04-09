@@ -79,3 +79,32 @@ def get_bin_history(
 def list_all_bins(db: Session = Depends(get_db)):
     """Return a list of all known bin IDs."""
     return bin_service.get_all_bins(db)
+
+
+@router.get("/predict")
+def get_predictive_heatmap(db: Session = Depends(get_db)):
+    """
+    Hackathon Feature: AI Predictive Heatmap
+    Uses a simple heuristic velocity multiplier to simulate 24-hour spillover risk.
+    """
+    from schemas import BinPredictResponse, BinPredictItem
+    
+    bin_ids = bin_service.get_all_bins(db)
+    predictions = []
+    
+    for bid in bin_ids:
+        reading = bin_service.get_latest_reading(db, bid)
+        if not reading: continue
+        
+        # Heuristic simulation deterministic call
+        risk = bin_service.calculate_predictive_risk(bid, reading.fill_pct)
+            
+        predictions.append(BinPredictItem(
+            bin_id=bid,
+            fill_pct=reading.fill_pct,
+            latitude=reading.latitude,
+            longitude=reading.longitude,
+            spillover_risk=risk,
+        ))
+        
+    return BinPredictResponse(predictions=predictions)

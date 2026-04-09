@@ -5,6 +5,7 @@ export default function ControlPanel({
   autoRefresh, onToggleAutoRefresh,
   threshold, onThresholdChange,
   optimizing, loading,
+  showPredictiveMap, onTogglePredict
 }) {
   const pct = threshold;
   // Normalize the 30-90 range to a 0-100% position for the background gradient
@@ -66,6 +67,35 @@ export default function ControlPanel({
         >
           <Flame size={15} color="#f87171" />
           <span>Simulate Critical Alert</span>
+        </button>
+
+        {/* Predict Toggle */}
+        <button
+          onClick={onTogglePredict}
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "10px 14px", borderRadius: 12,
+            border: showPredictiveMap ? "1px solid rgba(239,68,68,0.6)" : "1px solid rgba(255,255,255,0.08)",
+            background: showPredictiveMap ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
+            color: showPredictiveMap ? "#fca5a5" : "#e5e7eb",
+            fontSize: 13, fontWeight: 500,
+            cursor: "pointer", transition: "all 0.2s",
+            boxShadow: showPredictiveMap ? "0 0 15px rgba(239,68,68,0.2)" : "none",
+            width: "100%", textAlign: "left",
+          }}
+          onMouseOver={e => {
+            if (!showPredictiveMap) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            }
+          }}
+          onMouseOut={e => {
+            if (!showPredictiveMap) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+            }
+          }}
+        >
+          <span style={{ fontSize: 16 }}>⚡</span>
+          <span>{showPredictiveMap ? "Hide Forecast" : "Predict 24h Spillover"}</span>
         </button>
       </div>
 
