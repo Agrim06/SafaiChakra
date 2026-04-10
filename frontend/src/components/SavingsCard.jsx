@@ -1,4 +1,5 @@
 import { Fuel, Clock, Leaf, TrendingDown, ArrowRight } from "lucide-react";
+import { useMemo } from "react";
 
 const L_PER_KM = 1 / 4.5;
 const DIESEL_PRICE = 93;
@@ -41,44 +42,46 @@ function calcSavings(routeData) {
 function Metric({ icon: Icon, label, value, unit, color, delay = 0 }) {
   return (
     <div
-      className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-3 slide-in hover:bg-white/[0.04] transition-all"
+      className="bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] rounded-2xl p-4 flex flex-col gap-3 slide-in shadow-sm hover:border-[var(--color-text-dim)]/30 transition-all"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center justify-between">
-        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-          <Icon size={14} style={{ color }} />
+        <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-card-border)] flex items-center justify-center shadow-inner">
+          <Icon size={14} style={{ color: `var(${color})` }} />
         </div>
-        <span className="text-[8px] font-black tracking-[0.2em] uppercase opacity-40">Resolved</span>
+        <span className="text-[8px] font-black tracking-[0.2em] uppercase text-[var(--color-text-dim)] opacity-60">Resolved</span>
       </div>
       <div>
-        <p className="text-2xl font-black tracking-tighter tabular-nums mb-1">
+        <p className="text-2xl font-black tracking-tighter tabular-nums mb-1 text-[var(--color-text)]">
           {value}
-          <span className="text-[10px] font-bold text-[#85967c] ml-1 uppercase">{unit}</span>
+          <span className="text-[10px] font-bold text-[var(--color-text-dim)] ml-1 uppercase">{unit}</span>
         </p>
-        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#85967c]">{label}</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">{label}</p>
       </div>
     </div>
   );
 }
 
 export default function SavingsCard({ routeData }) {
-  const s = calcSavings(routeData);
+  const s = useMemo(() => calcSavings(routeData), [routeData]);
 
   if (!s) {
     return (
-      <div className="glass-panel p-6 flex flex-row items-center justify-between border-white/5 bg-[#1a1b21]/40 border-dashed border-2">
+      <div className="glass-panel p-6 flex flex-row items-center justify-between border-2 border-dashed border-[var(--color-card-border)] bg-[var(--color-bg)]/50">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-            <TrendingDown size={20} className="text-[#85967c]" />
+          <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-card-border)] flex items-center justify-center shadow-sm">
+            <TrendingDown size={20} className="text-[var(--color-text-dim)]" />
           </div>
           <div>
-            <p className="text-sm font-black text-white uppercase tracking-wider">Efficiency Analytics</p>
-            <p className="text-[10px] font-bold text-[#85967c] uppercase tracking-widest mt-1">Run <span className="text-[#39ff14]">Optimization</span> to sync data</p>
+            <p className="text-sm font-black text-[var(--color-text)] uppercase tracking-wider">Efficiency Analytics</p>
+            <p className="text-[10px] font-bold text-[var(--color-text-dim)] uppercase tracking-widest mt-1">
+              Run <span className="text-[var(--color-green)]">Optimization</span> to sync data
+            </p>
           </div>
         </div>
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2 opacity-20">
            {[...Array(3)].map((_, i) => (
-             <div key={i} className="w-24 h-8 rounded-lg bg-white/[0.02] border border-white/5" />
+             <div key={i} className="w-24 h-8 rounded-lg bg-[var(--color-card-border)]" />
            ))}
         </div>
       </div>
@@ -86,71 +89,70 @@ export default function SavingsCard({ routeData }) {
   }
 
   return (
-    <div className="glass-panel p-5 slide-in border-white/5 relative overflow-hidden">
-        {/* Background Accent */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#39ff14]/[0.02] blur-[100px] pointer-events-none" />
+    <div className="glass-panel p-5 slide-in border-[var(--color-card-border)] relative overflow-hidden">
+      {/* Background Accent - Soft glow based on performance */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-green)]/[0.03] blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
+      <div className="flex items-start justify-between flex-wrap gap-4 mb-6 relative z-10">
         <div className="flex items-center gap-4">
-          <div className="w-[42px] h-[42px] rounded-xl bg-[#39ff14]/10 border border-[#39ff14]/20 flex items-center justify-center">
-            <TrendingDown size={20} className="text-[#39ff14]" />
+          <div className="w-[46px] h-[46px] rounded-2xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] flex items-center justify-center shadow-sm">
+            <TrendingDown size={22} className="text-[var(--color-green)]" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-[#85967c] uppercase tracking-[0.25em] mb-0.5">Fleet Performance</p>
-            <p className="text-lg font-black text-white leading-none tracking-tight">Efficiency Savings</p>
+            <p className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.25em] mb-0.5">Fleet Performance</p>
+            <p className="text-xl font-black text-[var(--color-text)] leading-none tracking-tight">Efficiency Savings</p>
           </div>
         </div>
 
         {/* Distance comparison Readout */}
-        <div className="flex items-center gap-2 flex-wrap bg-white/[0.03] p-1.5 rounded-xl border border-white/5">
+        <div className="flex items-center gap-2 flex-wrap bg-[var(--color-bg)] p-1.5 rounded-xl border-2 border-[var(--color-card-border)] shadow-inner">
           <div className="px-3 py-2 flex flex-col">
-            <span className="text-[8px] font-black text-[#85967c] uppercase mb-0.5 tracking-tighter">Raw Path</span>
-            <span className="text-[11px] font-black tabular-nums">{s.eff_unopt} km</span>
+            <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase mb-0.5 tracking-tighter">Raw Path</span>
+            <span className="text-[12px] font-black tabular-nums text-[var(--color-text-muted)]">{s.eff_unopt} km</span>
           </div>
-          <ArrowRight size={14} className="text-[#292a2f]" />
-          <div className="px-3 py-2 flex flex-col bg-[#39ff14]/10 border border-[#39ff14]/10 rounded-lg">
-            <span className="text-[8px] font-black text-[#39ff14] uppercase mb-0.5 tracking-tighter">Optimized</span>
-            <span className="text-[11px] font-black tabular-nums text-white">{s.eff_opt} km</span>
+          <ArrowRight size={14} className="text-[var(--color-card-border)]" />
+          <div className="px-3 py-2 flex flex-col bg-[var(--color-green)]/10 border border-[var(--color-green)]/20 rounded-lg">
+            <span className="text-[9px] font-black text-[var(--color-green)] uppercase mb-0.5 tracking-tighter">Optimized</span>
+            <span className="text-[12px] font-black tabular-nums text-[var(--color-text)]">{s.eff_opt} km</span>
           </div>
-          <div className="px-4 py-2 flex flex-col bg-white/5 rounded-lg">
-            <span className="text-[8px] font-black text-[#baccb0] uppercase mb-0.5 tracking-tighter">Net Gain</span>
-            <span className="text-[11px] font-black text-[#39ff14]">₹{s.costSaved}</span>
+          <div className="px-4 py-2 flex flex-col bg-[var(--color-surface)] border border-[var(--color-card-border)] rounded-lg shadow-sm">
+            <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase mb-0.5 tracking-tighter">Net Gain</span>
+            <span className="text-[12px] font-black text-[var(--color-green)]">₹{s.costSaved}</span>
           </div>
         </div>
       </div>
 
       {/* Metrics grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Metric icon={Clock} label="Operational Time" value={s.timeSaved} unit="min" color="#00dbe9" delay={0} />
-        <Metric icon={Fuel} label="Substrate Fuel" value={s.fuelSaved} unit="L" color="#f59e0b" delay={60} />
-        <Metric icon={Leaf} label="CO₂ Mitigation" value={s.co2Saved} unit="kg" color="#39ff14" delay={120} />
-        <Metric icon={TrendingDown} label="Grid Distance" value={s.eff_saved} unit="km" color="#a855f7" delay={180} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 relative z-10">
+        <Metric icon={Clock} label="Operational Time" value={s.timeSaved} unit="min" color="--color-cyan" delay={0} />
+        <Metric icon={Fuel} label="Substrate Fuel" value={s.fuelSaved} unit="L" color="--color-amber" delay={60} />
+        <Metric icon={Leaf} label="CO₂ Mitigation" value={s.co2Saved} unit="kg" color="--color-green" delay={120} />
+        <Metric icon={TrendingDown} label="Grid Distance" value={s.eff_saved} unit="km" color="--color-purple" delay={180} />
       </div>
 
       {/* Efficiency progress bar */}
-      <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/5 relative overflow-hidden">
-        <div className="flex justify-between items-end mb-3">
+      <div className="bg-[var(--color-bg)] p-4 rounded-2xl border-2 border-[var(--color-card-border)] relative overflow-hidden shadow-inner">
+        <div className="flex justify-between items-end mb-4 relative z-10">
           <div className="flex flex-col">
-             <span className="text-[9px] font-black text-[#85967c] uppercase tracking-[0.2em] mb-1">Route Efficiency Delta</span>
-             <span className="text-[11px] font-bold text-[#baccb0]">Real-time OR-Tools analysis active</span>
+             <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-1.5">Route Efficiency Delta</span>
+             <span className="text-[11px] font-bold text-[var(--color-text-muted)] opacity-80">Real-time OR-Tools solver active</span>
           </div>
           <div className="text-right">
-             <span className="text-2xl font-black text-[#39ff14] tracking-tighter">{s.pct}%</span>
+             <span className="text-2xl font-black text-[var(--color-green)] tracking-tighter tabular-nums">{s.pct}%</span>
           </div>
         </div>
-        <div className="h-1.5 w-full bg-[#121318] rounded-full overflow-hidden border border-white/5">
+        <div className="h-2 w-full bg-[var(--color-surface)] rounded-full overflow-hidden border border-[var(--color-card-border)] shadow-inner">
           <div 
-            className="h-full bg-gradient-to-r from-emerald-600 to-[#39ff14] shadow-[0_0_12px_rgba(57,255,20,0.3)] transition-all duration-1000 ease-out"
+            className="h-full bg-gradient-to-r from-[var(--color-green)] to-[var(--color-green)] opacity-90 shadow-[2px_0_8px_rgba(0,0,0,0.05)] transition-all duration-1000 ease-out"
             style={{ width: `${Math.min(100, parseFloat(s.pct))}%` }} 
           />
         </div>
-        <p className="text-[8px] font-black text-[#85967c] mt-3 uppercase tracking-[0.2em] flex items-center gap-2">
-          <div className="w-1 h-1 rounded-full bg-[#39ff14]" />
+        <p className="text-[9px] font-black text-[var(--color-text-dim)] mt-4 uppercase tracking-[0.2em] flex items-center gap-2 opacity-70">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-green)] shadow-sm" />
           Engine: {s.hasRealDistances ? "Synchronized GPS Matrix" : "Synthetic Estimation Mode"}
         </p>
       </div>
     </div>
   );
 }
-

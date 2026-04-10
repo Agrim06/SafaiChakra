@@ -11,16 +11,16 @@ export default function ControlPanel({
   const pct = threshold;
   const fillPos = ((pct - 30) / (90 - 30)) * 100;
   const fillColor = pct >= 70 ? "var(--color-red)" : pct >= 50 ? "var(--color-amber)" : "var(--color-green)";
-  const glowShadow = `0 0 15px ${fillColor}44`;
+  const glowShadow = `0 4px 12px ${fillColor}33`;
 
   return (
-    <div className="glass-panel p-5 slide-in flex flex-col gap-6 relative overflow-hidden">
-      {/* Background HUD Lines - Swapped to a dynamic dim color */}
-      <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none">
-        <Zap size={100} className="text-[var(--color-text)]" />
+    <div className="glass-panel p-5 slide-in flex flex-col gap-6 border-[var(--color-card-border)] relative overflow-hidden">
+      {/* Background HUD Lines - Using extremely low opacity for a watermark effect */}
+      <div className="absolute -top-6 -right-6 p-4 opacity-[0.03] pointer-events-none text-[var(--color-text)]">
+        <Zap size={140} />
       </div>
 
-      {/* ── Bin Selector ── */}
+      {/* ── Bin Selector: Tactical Dropdown ── */}
       <div className="flex flex-col gap-2 relative z-10">
         <label className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.25em] ml-1">
           Node Focus Command
@@ -29,7 +29,7 @@ export default function ControlPanel({
           <select
             value={activeBin || ""}
             onChange={(e) => setActiveBin(e.target.value)}
-            className="w-full appearance-none bg-[var(--color-surface-container)] border border-[var(--color-card-border)] text-[var(--color-text)] text-[11px] font-black uppercase tracking-wider rounded-xl px-4 py-3.5 outline-none focus:border-[var(--color-green)]/40 transition-all cursor-pointer shadow-sm"
+            className="w-full appearance-none bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text)] text-[11px] font-black uppercase tracking-wider rounded-xl px-4 py-3.5 outline-none focus:border-[var(--color-green)]/50 transition-all cursor-pointer shadow-sm"
           >
             {allBins.map((id) => {
               const s = statuses[id];
@@ -45,28 +45,28 @@ export default function ControlPanel({
       </div>
 
       <div className="flex flex-col gap-3 relative z-10">
-        {/* Sync Status */}
+        {/* Sync Status / Manual Refresh */}
         <div className="flex items-center justify-between px-1 mb-1">
           <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-[var(--color-green)] animate-pulse shadow-[0_0_8px_var(--color-green)]' : 'bg-[var(--color-text-dim)]/30'}`}></div>
-            <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em]">
+            <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-[var(--color-green)] animate-pulse shadow-[0_0_8px_var(--color-green)]' : 'bg-[var(--color-card-border)]'}`}></div>
+            <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em]">
               {autoRefresh ? 'Telemetry Active' : 'Static Mode'}
             </span>
           </div>
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="p-1.5 hover:bg-[var(--color-text-dim)]/10 rounded-lg text-[var(--color-text-dim)] hover:text-[var(--color-text)] transition-all"
+            className="p-1.5 hover:bg-[var(--color-bg)] border border-transparent hover:border-[var(--color-card-border)] rounded-lg text-[var(--color-text-dim)] hover:text-[var(--color-text)] transition-all"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
 
-        {/* Action Grid: Optimize Route (High Contrast Fix) */}
+        {/* Action Grid: Optimize Route (High Contrast "Pop") */}
         <button
           onClick={onOptimize}
           disabled={optimizing}
-          className="active:scale-[0.98] transition-all relative overflow-hidden flex items-center justify-between px-4 py-4 rounded-xl bg-[var(--color-green)]/[0.08] border border-[var(--color-green)]/30 hover:bg-[var(--color-green)]/[0.12] hover:border-[var(--color-green)] group"
+          className="active:scale-[0.98] transition-all relative overflow-hidden flex items-center justify-between px-4 py-4 rounded-xl bg-[var(--color-green)]/10 border-2 border-[var(--color-green)]/30 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/20 group shadow-sm"
         >
           <div className="flex items-center gap-3">
             <Route size={18} className="text-[var(--color-green)] group-hover:scale-110 transition-transform" />
@@ -74,44 +74,44 @@ export default function ControlPanel({
               {optimizing ? "Computing Path..." : "Optimize Route"}
             </span>
           </div>
-          <span className="text-[8px] font-black bg-[var(--color-green)] text-white dark:text-black px-2 py-0.5 rounded leading-none">OR-TOOLS</span>
+          <span className="text-[8px] font-black bg-[var(--color-green)] text-[var(--color-bg)] px-2 py-0.5 rounded leading-none">OR-TOOLS</span>
         </button>
 
         {/* Alert Button */}
         <button
           onClick={onSimulateAlert}
-          className="active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3.5 rounded-xl bg-[var(--color-surface-container)] border border-[var(--color-card-border)] hover:bg-[var(--color-red)]/[0.08] hover:border-[var(--color-red)]/30 group"
+          className="active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3.5 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-[var(--color-red)] hover:border-[var(--color-red)]/30 hover:bg-[var(--color-red)]/5 group shadow-sm"
         >
-          <Flame size={16} className="text-[var(--color-text-dim)] group-hover:text-[var(--color-red)] transition-colors" />
-          <span className="text-[10px] font-bold text-[var(--color-text-dim)] group-hover:text-[var(--color-red)] transition-colors uppercase tracking-[0.2em]">Simulate Emergency</span>
+          <Flame size={16} className="transition-colors" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Simulate Emergency</span>
         </button>
 
-        {/* Predictive Toggle */}
+        {/* Predictive AI Toggle */}
         <button
           onClick={onTogglePredict}
-          className={`active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3.5 rounded-xl border ${
+          className={`active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 shadow-sm ${
             showPredictiveMap 
-              ? "bg-[var(--color-cyan)]/[0.1] border-[var(--color-cyan)] text-[var(--color-cyan)] shadow-sm" 
-              : "bg-[var(--color-surface-container)] border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:bg-[var(--color-text-dim)]/5"
+              ? "bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/40 text-[var(--color-cyan)]" 
+              : "bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg)]/80"
           } group`}
         >
           <span className={`text-[14px] ${showPredictiveMap ? 'animate-bounce' : ''}`}>⚡</span>
           <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
             {showPredictiveMap ? "Forecast Active" : "Predict Spillover"}
           </span>
-          {showPredictiveMap && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
+          {showPredictiveMap && <div className="ml-auto w-2 h-2 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
         </button>
       </div>
 
-      {/* ── Threshold Slider ── */}
-      <div className="bg-[var(--color-surface-container)] border border-[var(--color-card-border)] rounded-2xl p-4 pt-5 relative overflow-hidden group shadow-sm">
+      {/* ── Threshold Slider Tile ── */}
+      <div className="bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] rounded-2xl p-4 pt-5 relative overflow-hidden group shadow-inner">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle size={14} className="text-[var(--color-text-dim)]" />
             <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.25em]">Global Sensitivity</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-black tracking-tighter tabular-nums" style={{ color: fillColor, textShadow: glowShadow }}>
+            <span className="text-xl font-black tracking-tighter tabular-nums" style={{ color: `var(${fillColor === "var(--color-green)" ? "--color-green" : fillColor === "var(--color-red)" ? "--color-red" : "--color-amber"})` }}>
               {pct}
             </span>
             <span className="text-[10px] font-black text-[var(--color-text-dim)]">%</span>
@@ -122,16 +122,16 @@ export default function ControlPanel({
            <input
             type="range" min={30} max={90} value={threshold}
             onChange={e => onThresholdChange(Number(e.target.value))}
-            className="absolute inset-0 w-full h-1.5 rounded-full appearance-none cursor-pointer z-10"
+            className="absolute inset-0 w-full h-1.5 rounded-full appearance-none cursor-pointer z-10 bg-[var(--color-card-border)]"
             style={{
-              background: `linear-gradient(to right, ${fillColor} 0%, ${fillColor} ${fillPos}%, var(--color-card-border) ${fillPos}%)`
+              background: `linear-gradient(to right, ${fillColor} 0%, ${fillColor} ${fillPos}%, transparent ${fillPos}%)`
             }}
           />
         </div>
         
         <div className="flex justify-between px-1 mt-1">
-          <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase opacity-70">Conservative</span>
-          <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase opacity-70">Aggressive</span>
+          <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tight opacity-80">Conservative</span>
+          <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tight opacity-80">Aggressive</span>
         </div>
       </div>
     </div>
