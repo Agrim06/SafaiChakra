@@ -201,8 +201,13 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
               }}
             >
               <Popup className="custom-popup">
-                <div className="flex items-center justify-center">
-                  <span className="text-[14px] font-black" style={{ color }}>{p.spillover_risk}</span>
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                  <div 
+                    className="kinetic-ring" 
+                    style={{ '--ring-gradient': `conic-gradient(${color} ${p.spillover_risk}%, transparent 0%)` }} 
+                  />
+                  <span className="kinetic-id">{p.bin_id.replace("BIN_", "")}</span>
+                  <span className="kinetic-value">{p.spillover_risk}%</span>
                 </div>
               </Popup>
             </CircleMarker>
@@ -220,8 +225,15 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
           return (
             <Marker key={s.bin_id} position={[s.latitude, s.longitude]} icon={isDepot ? makeDepotIcon() : makeIcon(color, isCritical)}>
               <Popup className="custom-popup">
-                <div className="flex items-center justify-center">
-                  <span className="text-[14px] font-black text-white">{isDepot ? "H" : pct.toFixed(0)}</span>
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                  {!isDepot && (
+                    <div 
+                      className="kinetic-ring" 
+                      style={{ '--ring-gradient': `conic-gradient(${color} ${pct}%, transparent 0%)` }} 
+                    />
+                  )}
+                  <span className="kinetic-id">{isDepot ? "HUB" : s.bin_id.replace("BIN_", "")}</span>
+                  <span className="kinetic-value">{isDepot ? "DEP" : `${pct.toFixed(0)}%`}</span>
                 </div>
               </Popup>
             </Marker>

@@ -200,24 +200,62 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* ── Professional Leaflet Customization ── */
+/* ── Kinetic Node Badges (Stitch Enhanced) ── */
 .custom-popup .leaflet-popup-content-wrapper {
-  background: rgba(18, 19, 24, 0.95) !important;
-  color: #e3e1e9 !important;
-  border: 1px solid rgba(57, 255, 20, 0.3) !important;
+  background: #121318 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 50% !important;
   padding: 0 !important;
-  width: 44px !important;
-  height: 44px !important;
+  width: 52px !important;
+  height: 52px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-shadow: 0 0 25px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(57, 255, 20, 0.1) !important;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.7) !important;
+  overflow: hidden !important;
 }
 
 .custom-popup .leaflet-popup-content {
   margin: 0 !important;
   width: 100% !important;
-  text-align: center !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative;
+}
+
+.kinetic-ring {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  padding: 2px;
+  background: var(--ring-gradient, conic-gradient(#39ff14 0%, transparent 0%));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 2px));
+  opacity: 0.9;
+}
+
+.kinetic-id {
+  font-size: 7px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #85967c;
+  line-height: 1;
+  margin-bottom: 2px;
+  z-index: 10;
+}
+
+.kinetic-value {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  z-index: 10;
 }
 
 .custom-popup .leaflet-popup-tip-container {
