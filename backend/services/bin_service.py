@@ -28,6 +28,18 @@ def create_reading(db: Session, payload: BinUpdateRequest) -> models.BinReading:
     lat = payload.latitude if payload.latitude is not None else (latest.latitude if latest else None)
     lon = payload.longitude if payload.longitude is not None else (latest.longitude if latest else None)
 
+    if latest:
+        latest.fill_pct = payload.fill_pct
+        latest.distance_cm = payload.distance_cm
+        latest.latitude = lat
+        latest.longitude = lon
+        latest.is_alert = is_alert
+        from sqlalchemy.sql import func
+        latest.created_at = func.now()
+        db.commit()
+        db.refresh(latest)
+        return latest
+
     reading = models.BinReading(
         bin_id      = payload.bin_id,
         fill_pct    = payload.fill_pct,
@@ -40,7 +52,6 @@ def create_reading(db: Session, payload: BinUpdateRequest) -> models.BinReading:
     db.commit()
     db.refresh(reading)
     return reading
-
 
 def get_latest_reading(db: Session, bin_id: str) -> Optional[models.BinReading]:
     """Return the most recent reading for a given bin, or None."""

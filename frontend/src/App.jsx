@@ -10,7 +10,7 @@ import AgentPanel from "./components/AgentPanel";
 import SavingsCard from "./components/SavingsCard";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS = 15000;
+const POLL_MS = 3000;
 
 export default function App() {
   const [allBins, setAllBins] = useState([]);
@@ -19,7 +19,7 @@ export default function App() {
   const [routeData, setRouteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [threshold, setThreshold] = useState(60);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isLive, setIsLive] = useState(false);
