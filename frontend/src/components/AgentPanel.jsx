@@ -1,148 +1,112 @@
 import { Cpu, ArrowRight, CheckCircle2, Loader2, Radio, Zap, Navigation } from "lucide-react";
 
 const STEPS = [
-  {
-    id: "monitor",
-    icon: Radio,
-    label: "Sensor polling",
-    desc: "IoT bin data ingested via HTTP",
-    color: "#22c55e",
-    glow: "rgba(34,197,94,0.15)",
-  },
-  {
-    id: "decide",
-    icon: Zap,
-    label: "Threshold analysis",
-    desc: "Fill levels vs alert threshold",
-    color: "#f59e0b",
-    glow: "rgba(245,158,11,0.15)",
-  },
-  {
-    id: "optimize",
-    icon: Cpu,
-    label: "OR-Tools solver",
-    desc: "TSP route via Guided Local Search",
-    color: "#a78bfa",
-    glow: "rgba(167,139,250,0.15)",
-  },
-  {
-    id: "act",
-    icon: Navigation,
-    label: "Fleet dispatch",
-    desc: "Truck routed to critical bins",
-    color: "#38bdf8",
-    glow: "rgba(56,189,248,0.15)",
-  },
+  { id: "monitor", icon: Radio, label: "Polling", desc: "IoT Data", color: "#22c55e" },
+  { id: "decide", icon: Zap, label: "Analysis", desc: "Threshold", color: "#f59e0b" },
+  { id: "optimize", icon: Cpu, label: "Solver", desc: "OR-Tools", color: "#a78bfa" },
+  { id: "act", icon: Navigation, label: "Dispatch", desc: "Fleet", color: "#38bdf8" },
 ];
 
 export default function RouteIntelPanel({ route, optimizing, status }) {
   const hasAlert = status?.is_alert;
   const hasRoute = !!route;
-  const activeStep = optimizing ? 2 : hasRoute ? 3 : hasAlert ? 1 : 0;
-
-  // Count non-depot stops
+  
+  const activeStepIdx = optimizing ? 2 : hasRoute ? 3 : hasAlert ? 1 : 0;
   const stops = route ? route.filter(b => b !== "DEPOT_00") : [];
 
   return (
-    <div className="agent-card slide-in">
-      {/* Header */}
+    // FIX 1: Added pb-14 to create space for the absolute labels at the bottom
+    <div className="glass-panel p-5 pb-14 slide-in flex flex-col gap-10">
+      
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="agent-card__icon">
-            <Cpu size={16} color="#fff" />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+            <Cpu size={18} className="text-purple-400" />
           </div>
           <div>
-            <p className="text-[13px] font-bold text-white m-0">Route Intelligence</p>
-            <p className="text-[11px] text-gray-500 m-0">Automated decision pipeline</p>
+            <h3 className="text-sm font-black uppercase tracking-widest text-white leading-none">Route Intelligence</h3>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">Automated Pipeline</p>
           </div>
         </div>
-        <div className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-          optimizing ? 'bg-purple-500/10 border border-purple-500/30 text-purple-400' :
-          hasRoute ? 'bg-sky-500/10 border border-sky-500/25 text-sky-400' :
-          hasAlert ? 'bg-red-500/10 border border-red-500/25 text-red-400' :
-          'bg-green-500/10 border border-green-500/25 text-green-400'
+        <div className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest border transition-colors ${
+          optimizing ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' :
+          hasRoute ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+          'bg-slate-500/10 border-white/10 text-slate-400'
         }`}>
-          {optimizing ? "⚙ Computing…" : hasRoute ? "✓ Route ready" : hasAlert ? "⚠ Alert" : "● Monitoring"}
+          {optimizing ? "Computing" : hasRoute ? "Optimized" : "Monitoring"}
         </div>
       </div>
 
-      {/* Pipeline steps */}
-      <div className="flex flex-col gap-1.5">
+      {/* ── Progress Pipeline ── */}
+      <div className="relative flex items-center justify-between w-full px-4">
+        {/* The Background Track */}
+        <div className="absolute top-1/2 left-4 right-4 h-[1px] bg-white/10 -translate-y-1/2 z-0"></div>
+        
+        {/* The Active Progress Fill */}
+        <div 
+          className="absolute top-1/2 left-4 h-[1px] bg-gradient-to-r from-green-500 via-amber-500 to-purple-500 -translate-y-1/2 z-0 transition-all duration-1000 ease-in-out"
+          style={{ width: `calc(${(activeStepIdx / (STEPS.length - 1)) * 100}% - 32px)` }}
+        ></div>
+
         {STEPS.map((step, i) => {
-          const isDone = i < activeStep;
-          const isActive = i === activeStep;
+          const isDone = i < activeStepIdx;
+          const isActive = i === activeStepIdx;
           const Icon = step.icon;
-          
-          let stepClass = "agent-step";
-          if (isDone) stepClass += " agent-step--done";
-          if (!isActive && !isDone) stepClass += " agent-step--pending";
 
           return (
-            <div
-              key={step.id}
-              className={stepClass}
-              style={{
-                borderColor: isActive ? `${step.color}44` : undefined,
-                background: isActive ? step.glow : undefined,
-              }}
-            >
-              {/* Icon bubble */}
+            <div key={step.id} className="relative z-10 flex flex-col items-center">
+              {/* Node Circle */}
               <div 
-                className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-white/5"
-                style={{
-                  background: isDone ? "rgba(34,197,94,0.15)" : isActive ? `${step.glow}` : "rgba(255,255,255,0.04)",
-                }}
+                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
+                  isDone ? 'bg-green-500 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 
+                  isActive ? 'bg-slate-900 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]' : 
+                  'bg-[#0a0c10] border-white/10'
+                }`}
               >
-                {isDone
-                  ? <CheckCircle2 size={14} color="#22c55e" />
-                  : isActive && optimizing && i === 2
-                    ? <Loader2 size={14} color={step.color} className="spinner" />
-                    : <Icon size={14} color={isActive ? step.color : "#4b5563"} />
-                }
+                {isDone ? (
+                  <CheckCircle2 size={18} className="text-slate-950" strokeWidth={3} />
+                ) : isActive && optimizing && i === 2 ? (
+                  <Loader2 size={18} className="text-purple-400 animate-spin" />
+                ) : (
+                  <Icon size={16} className={isActive ? 'text-purple-400' : 'text-slate-600'} />
+                )}
               </div>
 
-              <div className="flex-1 min-w-0">
-                <p 
-                  className={`text-[12px] font-semibold m-0 ${isDone ? 'text-gray-300' : ''}`}
-                  style={{ color: !isDone && isActive ? step.color : undefined }}
-                >
+              {/* Absolute Labels */}
+              <div className="absolute top-14 flex flex-col items-center text-center w-32">
+                <span className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${isActive ? 'text-white' : 'text-slate-500'}`}>
                   {step.label}
-                </p>
-                <p 
-                  className={`text-[10px] m-0 whitespace-nowrap overflow-hidden text-ellipsis ${isActive ? 'text-gray-400' : 'text-gray-700'}`}
-                >
+                </span>
+                <span className="text-[9px] font-bold text-slate-700 uppercase tracking-tighter">
                   {step.desc}
-                </p>
+                </span>
               </div>
-
-              {/* Step number */}
-              <span 
-                className={`agent-step__num ${isDone ? 'text-green-500' : 'text-gray-700'}`}
-                style={{ color: (!isDone && isActive) ? step.color : undefined }}
-              >
-                {isDone ? "✓" : `0${i + 1}`}
-              </span>
             </div>
           );
         })}
       </div>
 
-      {/* Route result */}
+      {/* ── Dispatch Result chips ── */}
       {hasRoute && !optimizing && (
-        <div className="agent-route-box flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-gray-500 font-semibold tracking-wider m-0">OPTIMIZED ROUTE</p>
-            <span className="text-[10px] font-bold text-purple-400 bg-purple-500/15 border border-purple-500/30 rounded-full px-2 py-0.5">
-              {stops.length} stops
+        <div className="mt-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Sequence</p>
+            <span className="text-[9px] font-black text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20 uppercase">
+              {stops.length} Nodes
             </span>
           </div>
-          <div className="flex flex-wrap gap-1.5 items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             {route.map((bin, i) => (
-              <div key={i} className="flex items-center gap-1">
-                <span className={`agent-bin-chip ${bin === "DEPOT_00" ? '!bg-blue-600/20 !border-blue-600/40 !text-blue-300' : ''}`}>
-                  {bin === "DEPOT_00" ? "🏭 Depot" : bin}
+              <div key={i} className="flex items-center gap-1.5">
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border transition-colors ${
+                  bin === "DEPOT_00" 
+                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
+                  : 'bg-white/5 border-white/10 text-slate-300'
+                }`}>
+                  {bin === "DEPOT_00" ? "DEPOT" : bin}
                 </span>
-                {i < route.length - 1 && <ArrowRight size={10} className="text-gray-700" />}
+                {i < route.length - 1 && <ArrowRight size={10} className="text-slate-700" />}
               </div>
             ))}
           </div>
