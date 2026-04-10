@@ -12,12 +12,12 @@ export default function Navbar({ lastUpdated, isLive }) {
               <Leaf size={17} className="text-white" />
             </div>
             <div className="leading-tight">
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-0">
                 <span className="navbar__brand-safai">Safai</span>
                 <span className="navbar__brand-chakra">Chakra</span>
               </div>
               <p className="navbar__tagline">
-                AI Waste Management Agent
+                Smart Waste Collection Route Optimizer
               </p>
             </div>
           </div>

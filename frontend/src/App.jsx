@@ -123,12 +123,12 @@ export default function App() {
   const activeStatus = useMemo(() => activeBin ? statuses[activeBin] : null, [activeBin, statuses]);
 
   return (
-    <div className="min-h-screen bg-[#05070a] text-white selection:bg-green-500/30 font-inter antialiased">
+    <div className="h-screen flex flex-col bg-[#05070a] text-white selection:bg-green-500/30 font-inter antialiased overflow-hidden">
       <Navbar lastUpdated={lastUpdated} isLive={isLive} />
 
-      <main className="max-w-[1600px] mx-auto px-6 py-8">
+      <main className="flex-1 overflow-hidden px-6 py-4 flex flex-col mt-16">
         {error && (
-          <div className="glass-panel border-red-500/20 bg-red-500/5 mb-6 px-4 py-3 flex items-center justify-between animate-in fade-in slide-in-from-top-4">
+          <div className="glass-panel border-red-500/20 bg-red-500/5 mb-4 px-4 py-3 flex items-center justify-between animate-in fade-in slide-in-from-top-4 shrink-0">
             <div className="flex items-center gap-3"><Zap size={16} className="text-red-400" /><p className="text-sm font-medium text-red-200">{error}</p></div>
             <button onClick={() => setError(null)} className="hover:bg-white/10 p-1.5 rounded-lg transition-colors">✕</button>
           </div>
@@ -153,32 +153,9 @@ export default function App() {
           </div>
         )}
 
-        <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10">
-          <div>
-            <h1 className="text-4xl font-black tracking-tighter text-gradient leading-none">COMMAND CENTER</h1>
-            <div className="flex items-center gap-2 mt-2">
-              <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'} animate-pulse`}></div>
-              <p className="text-[11px] text-slate-500 font-black uppercase tracking-[0.2em]">{isLive ? 'Global Grid Synchronized' : 'Link Offline'}</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Active Intelligence Node</label>
-            <div className="flex items-center gap-4 bg-slate-900/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl group hover:border-purple-500/30 transition-all">
-              <div className="relative flex-1 min-w-[260px]">
-                <select value={activeBin || ""} onChange={(e) => setActiveBin(e.target.value)} className="w-full bg-slate-800/80 appearance-none border-none text-xs font-black uppercase tracking-widest rounded-xl px-5 py-3 outline-none cursor-pointer focus:ring-2 ring-purple-500/40 transition-all pr-12">
-                  {allBins.map((id) => (
-                    <option key={id} value={id} className="bg-slate-900 font-sans">{id} {statuses[id] ? `(${statuses[id].fill_pct.toFixed(0)}%)` : ""}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-hover:text-purple-400 transition-colors" />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-          <section className="xl:col-span-4 space-y-8">
+        {/* Removed redundant bin dropdown */}
+        <div className="flex-1 overflow-hidden grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+          <section className="xl:col-span-4 h-full overflow-y-auto space-y-6 pr-2 custom-scrollbar">
             <BinCard status={activeStatus} loading={loading} threshold={threshold} />
             <ControlPanel
               onRefresh={() => fetchData()}
@@ -199,34 +176,33 @@ export default function App() {
             />
 
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
+            
+            <footer className="pb-6 border-t border-white/5 pt-6 flex flex-col items-center gap-4">
+              <div className="text-center space-y-1">
+                <p className="text-[9px] uppercase tracking-[0.4em] text-slate-600 font-black">SafaiChakra Intelligence System</p>
+                <p className="text-[8px] text-slate-800 font-bold uppercase tracking-widest leading-relaxed">Smart Waste Collection Route Optimizer<br/>© {new Date().getFullYear()}</p>
+              </div>
+            </footer>
           </section>
 
           {/* RIGHT ACTIVE VIEW - 8 columns */}
-          <section className="xl:col-span-8 flex flex-col gap-5 h-full">
-            <MapView
-              route={route}
-              optimizing={optimizing}
-              statuses={statuses}
-              threshold={threshold}
-              showPredictiveMap={showPredictiveMap}
-              predictiveData={predictiveData}
-            />
+          <section className="xl:col-span-8 flex flex-col gap-5 h-full overflow-hidden">
+            <div className="flex-1 relative min-h-0">
+              <MapView
+                route={route}
+                optimizing={optimizing}
+                statuses={statuses}
+                threshold={threshold}
+                showPredictiveMap={showPredictiveMap}
+                predictiveData={predictiveData}
+              />
+            </div>
 
-            <SavingsCard routeData={routeData} />
+            <div className="shrink-0">
+              <SavingsCard routeData={routeData} />
+            </div>
           </section>
         </div>
-
-        <footer className="mt-20 pb-10 border-t border-white/5 pt-10 flex flex-col items-center gap-6">
-          <div className="flex items-center gap-8 opacity-20 grayscale transition-all hover:opacity-50 cursor-default">
-             <div className="h-6 w-6 rounded-lg bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"></div>
-             <div className="h-4 w-12 rounded-full bg-white"></div>
-             <div className="h-6 w-6 rounded-lg border-2 border-white"></div>
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-[10px] uppercase tracking-[0.4em] text-slate-600 font-black">SafaiChakra Intelligence System · v1.0.4</p>
-            <p className="text-[9px] text-slate-800 font-bold uppercase tracking-widest">Automated Waste Management & Logic Engine · {new Date().getFullYear()}</p>
-          </div>
-        </footer>
       </main>
     </div>
   );

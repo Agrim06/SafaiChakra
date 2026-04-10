@@ -297,7 +297,7 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
 
   return (
     <>
-      <div className="glass-panel flex flex-col overflow-hidden h-full min-h-[500px] border-white/5 shadow-2xl">
+      <div className="glass-panel flex flex-col overflow-hidden h-full border-white/5 shadow-2xl">
         <Header isModal={false} />
         <div className="flex-1 relative">
           <MapCanvas 

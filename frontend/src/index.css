@@ -181,20 +181,17 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: var(--color-surface) !important;
 }
 
-/* ── Scrollbar ──────────────────────────────────────────────── */
-::-webkit-scrollbar {
+/* ── Custom Scrollbar ── */
+.custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
-
-::-webkit-scrollbar-track {
+.custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
