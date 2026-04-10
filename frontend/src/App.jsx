@@ -30,7 +30,7 @@ export default function App() {
   const [showPredictiveMap, setShowPredictiveMap] = useState(false);
   const [predictiveData, setPredictiveData] = useState(null);
 
-  // ── 1. Fetch all known bins ───────────────────────────────────────────────
+  // 1. Fetch all known bins
   const fetchAllBins = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API_BASE}/bin/all`);
@@ -50,7 +50,7 @@ export default function App() {
   const fetchData = useCallback(async (signal) => {
     if (!autoRefresh) setLoading(true);
     try {
-      const bins = await fetchAllBins(); // Using fetchAllBins as unified discovery
+      const bins = await fetchAllBins();
       const results = await Promise.allSettled(
         bins.map(id => axios.get(`${API_BASE}/bin/status/${id}`, { signal }))
       );
@@ -119,41 +119,51 @@ export default function App() {
     }
   };
 
-  const route = routeData?.route ?? null;
-  const activeStatus = useMemo(() => activeBin ? statuses[activeBin] : null, [activeBin, statuses]);
+  // ── 3. Derived Variables (Must be before the return) ──────────────────
+  const route = useMemo(() => routeData?.route ?? null, [routeData]);
+  const activeStatus = useMemo(() => (activeBin ? statuses[activeBin] : null), [activeBin, statuses]);
 
   return (
-    <div className="h-screen flex flex-col bg-[#121318] text-[#e3e1e9] selection:bg-[#39ff14]/30 font-inter antialiased overflow-hidden">
+    <div className="h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-green)]/30 font-inter antialiased overflow-hidden transition-colors duration-300">
       <Navbar lastUpdated={lastUpdated} isLive={isLive} />
 
       <main className="flex-1 overflow-hidden px-8 py-6 flex flex-col mt-16 slide-in">
         {error && (
-          <div className="glass-panel border-red-500/20 bg-red-500/5 mb-4 px-4 py-3 flex items-center justify-between animate-in fade-in slide-in-from-top-4 shrink-0">
-            <div className="flex items-center gap-3"><Zap size={16} className="text-red-400" /><p className="text-sm font-medium text-red-200">{error}</p></div>
-            <button onClick={() => setError(null)} className="hover:bg-white/10 p-1.5 rounded-lg transition-colors">✕</button>
+          <div className="glass-panel border-red-500/20 bg-red-500/5 mb-4 px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <Zap size={16} className="text-red-400" />
+              <p className="text-sm font-medium text-red-200">{error}</p>
+            </div>
+            <button onClick={() => setError(null)} className="hover:bg-white/10 p-1.5 rounded-lg">✕</button>
           </div>
         )}
 
         {activeStatus?.is_alert && !toastHidden && (
-          <div className="fixed top-24 right-6 z-[1000] glass-panel border-red-500/30 bg-red-500/10 p-4 min-w-[340px] shadow-[0_0_40px_rgba(239,68,68,0.2)] animate-in slide-in-from-right-8">
+          <div className="fixed top-24 right-6 z-[1000] glass-panel border-red-500/30 bg-red-500/10 p-4 min-w-[340px] shadow-[var(--glow-neon)] animate-in slide-in-from-right-8">
             <div className="flex gap-4">
               <div className="relative">
                 <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-2xl">🚨</div>
                 <div className="absolute inset-0 rounded-2xl border-2 border-red-500 animate-ping opacity-20"></div>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2"><ShieldAlert size={14} className="text-red-400" /><h3 className="text-xs font-black tracking-widest uppercase">Critical Overflow</h3></div>
-                <p className="text-[11px] text-red-200/60 mt-1 font-bold">Node {activeBin} at {activeStatus.fill_pct.toFixed(0)}%</p>
-                <button onClick={handleOptimize} disabled={optimizing} className="mt-3 w-full py-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 rounded-lg text-[10px] font-black uppercase tracking-widest text-red-100 transition-all active:scale-95 disabled:opacity-50">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert size={14} className="text-red-400" />
+                  <h3 className="text-xs font-black tracking-widest uppercase">Critical Overflow</h3>
+                </div>
+                <p className="text-[11px] mt-1 font-bold opacity-70">Node {activeBin} at {activeStatus.fill_pct.toFixed(0)}%</p>
+                <button 
+                  onClick={handleOptimize} 
+                  disabled={optimizing} 
+                  className="mt-3 w-full py-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                >
                   {optimizing ? <Loader2 className="animate-spin mx-auto" size={14} /> : "Dispatch Fleet →"}
                 </button>
               </div>
-              <button onClick={() => setToastHidden(true)} className="self-start text-white/20 hover:text-white transition-colors">✕</button>
+              <button onClick={() => setToastHidden(true)} className="self-start opacity-20 hover:opacity-100">✕</button>
             </div>
           </div>
         )}
 
-        {/* Removed redundant bin dropdown */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
           <section className="xl:col-span-4 h-full overflow-y-auto space-y-6 pr-2 custom-scrollbar">
             <BinCard status={activeStatus} loading={loading} threshold={threshold} />
@@ -174,18 +184,16 @@ export default function App() {
               setActiveBin={setActiveBin}
               statuses={statuses}
             />
-
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
 
-            <footer className="pb-6 border-t border-white/5 pt-6 flex flex-col items-center gap-4">
+            <footer className="pb-6 border-t border-[var(--color-card-border)] pt-6 flex flex-col items-center gap-4">
               <div className="text-center space-y-1">
-                <p className="text-[9px] uppercase tracking-[0.4em] text-slate-600 font-black">SafaiChakra Intelligence System</p>
-                <p className="text-[8px] text-slate-800 font-bold uppercase tracking-widest leading-relaxed">Smart Waste Collection Route Optimizer<br />© {new Date().getFullYear()}</p>
+                <p className="text-[9px] uppercase tracking-[0.4em] text-[var(--color-text-dim)] font-black">SafaiChakra Intelligence System</p>
+                <p className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest leading-relaxed">Smart Waste Collection Route Optimizer<br />© {new Date().getFullYear()}</p>
               </div>
             </footer>
           </section>
 
-          {/* RIGHT ACTIVE VIEW - 8 columns */}
           <section className="xl:col-span-8 flex flex-col gap-5 h-full overflow-hidden">
             <div className="flex-1 relative min-h-0">
               <MapView
@@ -197,7 +205,6 @@ export default function App() {
                 predictiveData={predictiveData}
               />
             </div>
-
             <div className="shrink-0">
               <SavingsCard routeData={routeData} />
             </div>

@@ -10,7 +10,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Map, Maximize2, X, Navigation, LocateFixed } from "lucide-react";
+import { Maximize2, X, Navigation, LocateFixed } from "lucide-react";
 
 // Fix for default Leaflet icon paths in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -25,7 +25,7 @@ const makeIcon = (color, pulse = false) =>
   L.divIcon({
     className: "custom-div-icon",
     html: `
-      <div style="position:relative;width:14px;height:14px;display:flex;items-center:center;justify-content:center;">
+      <div style="position:relative;width:14px;height:14px;display:flex;align-items:center;justify-content:center;">
         ${pulse ? `<div style="position:absolute;inset:-4px;border-radius:2px;transform:rotate(45deg);background:${color};opacity:0.25;animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : ""}
         <div style="width:14px;height:14px;transform:rotate(45deg);border:1px solid rgba(255,255,255,0.4);border-radius:2px;background:${color};box-shadow:0 0 10px ${color}88;"></div>
         <div style="position:absolute;width:4px;height:4px;background:white;border-radius:50%;opacity:0.8;"></div>
@@ -40,7 +40,7 @@ const makeDepotIcon = () =>
     html: `
       <div style="position:relative;width:24px;height:24px;">
         <div style="position:absolute;inset:-3px;border-radius:6px;transform:rotate(45deg);background:rgba(0,219,233,0.15);animation:pulse 2s infinite;"></div>
-        <div style="width:24px;height:24px;background:#121318;border:1.5px solid #00dbe9;transform:rotate(45deg);border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(0,219,233,0.3);">
+        <div style="width:24px;height:24px;background:var(--color-surface);border:1.5px solid #00dbe9;transform:rotate(45deg);border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(0,219,233,0.3);">
           <div style="transform:rotate(-45deg);font-size:12px;">🏭</div>
         </div>
       </div>`,
@@ -70,15 +70,12 @@ function buildLocations(statuses) {
   return locs;
 }
 
-/* ── Auto-fit bounds logic ── */
 function MapController({ route, locations, recenterTrigger }) {
   const map = useMap();
-
   useEffect(() => {
     const updateMap = () => {
       map.invalidateSize();
       const coords = route?.map((id) => locations[id]).filter(Boolean) || [];
-
       if (coords.length > 1) {
         map.fitBounds(coords, { padding: [70, 70], animate: true });
       } else {
@@ -88,15 +85,12 @@ function MapController({ route, locations, recenterTrigger }) {
         }
       }
     };
-
     const timer = setTimeout(updateMap, 300);
     return () => clearTimeout(timer);
   }, [route, locations, map, recenterTrigger]);
-
   return null;
 }
 
-/* ── Animated truck along route ── */
 function AnimatedTruck({ routeCoords }) {
   const [truckPos, setTruckPos] = useState(routeCoords[0]);
   const stepRef = useRef(0);
@@ -107,32 +101,25 @@ function AnimatedTruck({ routeCoords }) {
     stepRef.current = 0;
     segRef.current = 0;
     setTruckPos(routeCoords[0]);
-
     const STEPS_PER_SEG = 5;
     const INTERVAL_MS = 7;
-
     const id = setInterval(() => {
       const seg = stepRef.current;
       if (seg >= routeCoords.length - 1) return clearInterval(id);
-
       segRef.current += 1;
       const t = segRef.current / STEPS_PER_SEG;
-
       if (t >= 1) {
         stepRef.current += 1;
         segRef.current = 0;
       }
-
       const from = routeCoords[stepRef.current];
       const to = routeCoords[Math.min(stepRef.current + 1, routeCoords.length - 1)];
       if (!from || !to) return;
-
       setTruckPos([
         from[0] + (to[0] - from[0]) * Math.min(t, 1),
         from[1] + (to[1] - from[1]) * Math.min(t, 1),
       ]);
     }, INTERVAL_MS);
-
     return () => clearInterval(id);
   }, [routeCoords]);
 
@@ -140,24 +127,23 @@ function AnimatedTruck({ routeCoords }) {
   return <Marker position={truckPos} icon={makeTruckIcon()} zIndexOffset={1000} />;
 }
 
-/* ── Map Legend ── */
 function MapLegend({ threshold }) {
   const items = [
-    { color: "#00dbe9", label: "Depot", glow: "#00dbe9" },
-    { color: "#39ff14", label: `Normal (<${threshold - 30}%)`, glow: "#39ff14" },
-    { color: "#f59e0b", label: `Warning (<${threshold}%)`, glow: "#f59e0b" },
-    { color: "#ff4d4d", label: `Critical (>${threshold}%)`, glow: "#ff4d4d" },
-    { color: "#a855f7", label: "Route Path", glow: "#a855f7" },
+    { color: "var(--color-cyan)", label: "Depot" },
+    { color: "var(--color-green)", label: `Normal (<${threshold - 30}%)` },
+    { color: "var(--color-amber)", label: `Warning (<${threshold}%)` },
+    { color: "var(--color-red)", label: `Critical (>${threshold}%)` },
+    { color: "var(--color-purple)", label: "Route Path" },
   ];
 
   return (
-    <div className="absolute bottom-6 left-6 z-[1000] glass-panel bg-slate-950/80 p-4 border-white/10 shadow-2xl pointer-events-none backdrop-blur-md">
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Tactical Legend</p>
+    <div className="absolute bottom-6 left-6 z-[1000] glass-panel bg-[var(--color-surface)] p-4 border-[var(--color-card-border)] shadow-2xl pointer-events-none backdrop-blur-md">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Tactical Legend</p>
       <div className="space-y-2.5">
         {items.map((i) => (
           <div key={i.label} className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full" style={{ background: i.color, boxShadow: `0 0 8px ${i.glow}` }} />
-            <span className="text-[10px] font-bold text-slate-300 uppercase">{i.label}</span>
+            <span className="w-2 h-2 rounded-full" style={{ background: i.color, boxShadow: `0 0 8px ${i.color}` }} />
+            <span className="text-[10px] font-bold text-[var(--color-text)] uppercase">{i.label}</span>
           </div>
         ))}
       </div>
@@ -165,9 +151,13 @@ function MapLegend({ threshold }) {
   );
 }
 
-/* ── Main Canvas ── */
-function MapCanvas({ route, optimizing, statuses, locations, routeCoords, threshold, showPredictiveMap, predictiveData, recenterTrigger }) {
+function MapCanvas({ route, optimizing, statuses, locations, routeCoords, threshold, showPredictiveMap, predictiveData, recenterTrigger, isLight }) {
   const center = locations["DEPOT_00"] || [12.3106, 76.6450];
+  
+  // Dynamic Map URL based on theme
+  const tileUrl = isLight 
+    ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 
   return (
     <div className="relative w-full h-full min-h-[400px]">
@@ -178,7 +168,7 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
         zoomControl={false}
         attributionControl={false}
       >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        <TileLayer url={tileUrl} />
 
         {/* ── Predictive AI Layer ── */}
         {showPredictiveMap && predictiveData && predictiveData.map((p) => {
@@ -220,7 +210,13 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
           const pct = s.fill_pct ?? 0;
           const isCritical = s.is_alert || pct >= threshold;
           const isWarning = pct >= threshold - 30;
-          const color = isDepot ? "#00dbe9" : isCritical ? "#ff4d4d" : isWarning ? "#f59e0b" : "#39ff14";
+          
+          // Use dynamic CSS variables for colors
+          const color = isDepot 
+            ? "var(--color-cyan)" 
+            : isCritical ? "var(--color-red)" 
+            : isWarning ? "var(--color-amber)" 
+            : "var(--color-green)";
 
           return (
             <Marker key={s.bin_id} position={[s.latitude, s.longitude]} icon={isDepot ? makeDepotIcon() : makeIcon(color, isCritical)}>
@@ -242,8 +238,8 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
 
         {routeCoords.length > 1 && (
           <>
-            <Polyline positions={routeCoords} color="#a855f7" weight={4} opacity={0.6} dashArray="8 8" />
-            <Polyline positions={routeCoords} color="#a855f7" weight={10} opacity={0.1} />
+            <Polyline positions={routeCoords} color="var(--color-purple)" weight={4} opacity={0.7} />
+            <Polyline positions={routeCoords} color="var(--color-purple)" weight={10} opacity={0.15} />
             {!optimizing && <AnimatedTruck routeCoords={routeCoords} />}
           </>
         )}
@@ -260,15 +256,25 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
   const [expanded, setExpanded] = useState(false);
   const [roadPath, setRoadPath] = useState(null);
   const [recenterCount, setRecenterCount] = useState(0);
+  const [isLight, setIsLight] = useState(document.documentElement.getAttribute("data-theme") === "light");
+
   const locations = buildLocations(statuses);
   const routeSignature = route?.join("-") || "none";
+
+  // Watch for theme changes from the button in index.html
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsLight(document.documentElement.getAttribute("data-theme") === "light");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!route || route.length < 2) { setRoadPath(null); return; }
     const coords = route.map(id => locations[id]).filter(Boolean);
     if (coords.length < 2) return;
 
-    // Show straight lines immediately while fetching road-following path
     setRoadPath(coords);
 
     fetch(`https://router.project-osrm.org/route/v1/driving/${coords.map(c => `${c[1]},${c[0]}`).join(";")}?overview=full&geometries=geojson`)
@@ -284,14 +290,14 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
   const displayPath = roadPath || (route?.map(id => locations[id]).filter(Boolean) || []);
 
   const Header = ({ isModal }) => (
-    <div className="flex items-center justify-between px-5 py-3 bg-[#1a1b21]/40 border-b border-white/5 backdrop-blur-xl">
+    <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-surface)] border-b border-[var(--color-card-border)] backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <div className="relative flex items-center justify-center">
           <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></div>
           <div className="absolute w-2 h-2 rounded-full bg-purple-500 animate-ping opacity-40"></div>
         </div>
         <div>
-          <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-text)]">
             Grid Intelligence Overlay
           </h3>
         </div>
@@ -307,16 +313,16 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
         
         <button
           onClick={() => setRecenterCount(v => v + 1)}
-          className="p-1.5 hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-white border border-transparent hover:border-white/10 group flex items-center gap-2 pr-3"
+          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-[var(--color-text)] border border-transparent group flex items-center gap-2 pr-3"
           title="Recenter Map"
         >
           <LocateFixed size={16} className="group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">Recenter</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">Recenter</span>
         </button>
 
         <button
           onClick={() => setExpanded(!isModal)}
-          className="p-1.5 hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-white border border-transparent hover:border-white/10"
+          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-[var(--color-text)] border border-transparent"
         >
           {isModal ? <X size={16} /> : <Maximize2 size={16} />}
         </button>
@@ -326,7 +332,7 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
 
   return (
     <>
-      <div className="glass-panel flex flex-col overflow-hidden h-full border-white/5 shadow-2xl">
+      <div className="glass-panel flex flex-col overflow-hidden h-full border-[var(--color-card-border)] shadow-2xl">
         <Header isModal={false} />
         <div className="flex-1 relative">
           <MapCanvas
@@ -339,13 +345,14 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
             showPredictiveMap={showPredictiveMap}
             predictiveData={predictiveData}
             recenterTrigger={recenterCount}
+            isLight={isLight}
           />
         </div>
       </div>
 
       {expanded && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl p-6 flex flex-col">
-          <div className="w-full max-w-[1800px] mx-auto h-full flex flex-col rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+        <div className="fixed inset-0 z-[9999] bg-[var(--color-bg)]/95 backdrop-blur-xl p-6 flex flex-col">
+          <div className="w-full max-w-[1800px] mx-auto h-full flex flex-col rounded-3xl overflow-hidden border border-[var(--color-card-border)] shadow-2xl">
             <Header isModal={true} />
             <div className="flex-1 relative">
               <MapCanvas
@@ -358,6 +365,7 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
                 showPredictiveMap={showPredictiveMap}
                 predictiveData={predictiveData}
                 recenterTrigger={recenterCount}
+                isLight={isLight}
               />
             </div>
           </div>

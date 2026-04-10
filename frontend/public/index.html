@@ -1,32 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
+<html lang="en" data-theme="dark"> <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0a0f1e" />
     <meta name="description" content="SafaiChakra — AI-Powered Smart Waste Management Dashboard" />
     <title>SafaiChakra</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-    <!-- Tailwind Play CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: { inter: ['Inter', 'sans-serif'] },
             colors: {
-              surface: '#0a0f1e',
-              card: '#111827',
-              border: '#1f2937',
+              surface: 'var(--color-bg)',
+              card: 'var(--color-surface)',
+              border: 'var(--color-card-border)',
             },
           },
         },
@@ -34,7 +25,43 @@
     </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <button 
+      id="theme-toggle"
+      onclick="toggleTheme()"
+      class="fixed top-6 right-20 z-[10001] p-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md hover:bg-white/20 transition-all shadow-lg"
+      title="Toggle Light/Dark Mode"
+    >
+      <svg id="theme-toggle-dark-icon" class="w-5 h-5 text-amber-400 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
+      <svg id="theme-toggle-light-icon" class="w-5 h-5 text-slate-700 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+    </button>
+
     <div id="root"></div>
+
+    <script>
+      function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', newTheme);
+        updateIcons(newTheme);
+      }
+
+      function updateIcons(theme) {
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        
+        if (theme === 'dark') {
+          darkIcon.classList.remove('hidden');
+          lightIcon.classList.add('hidden');
+        } else {
+          darkIcon.classList.add('hidden');
+          lightIcon.classList.remove('hidden');
+        }
+      }
+
+      // Initialize icons
+      updateIcons(document.documentElement.getAttribute('data-theme'));
+    </script>
   </body>
 </html>
