@@ -38,24 +38,24 @@ function calcSavings(routeData) {
   };
 }
 
-function Metric({ icon: Icon, label, value, unit, colorClass, borderClass, bgClass, textClass, delay = 0 }) {
+function Metric({ icon: Icon, label, value, unit, color, delay = 0 }) {
   return (
     <div
-      className={`savings-metric slide-in border ${borderClass} ${bgClass}`}
+      className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-3 slide-in hover:bg-white/[0.04] transition-all"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center justify-between">
-        <div className={`savings-metric__icon bg-white/5`}>
-          <Icon size={13} className={colorClass} />
+        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+          <Icon size={14} style={{ color }} />
         </div>
-        <span className={`savings-metric__tag ${colorClass} opacity-80 tracking-widest`}>SAVED</span>
+        <span className="text-[8px] font-black tracking-[0.2em] uppercase opacity-40">Resolved</span>
       </div>
       <div>
-        <p className="savings-metric__value m-0">
+        <p className="text-2xl font-black tracking-tighter tabular-nums mb-1">
           {value}
-          <span className="savings-metric__unit">{unit}</span>
+          <span className="text-[10px] font-bold text-[#85967c] ml-1 uppercase">{unit}</span>
         </p>
-        <p className="savings-metric__label m-0 mt-1">{label}</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#85967c]">{label}</p>
       </div>
     </div>
   );
@@ -66,75 +66,91 @@ export default function SavingsCard({ routeData }) {
 
   if (!s) {
     return (
-      <div className="savings-card savings-card--empty slide-in !flex-row items-center justify-center gap-4 py-8">
-        <div className="savings-card__icon shrink-0">
-          <TrendingDown size={18} className="text-white" />
+      <div className="glass-panel p-6 flex flex-row items-center justify-between border-white/5 bg-[#1a1b21]/40 border-dashed border-2">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+            <TrendingDown size={20} className="text-[#85967c]" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-white uppercase tracking-wider">Efficiency Analytics</p>
+            <p className="text-[10px] font-bold text-[#85967c] uppercase tracking-widest mt-1">Run <span className="text-[#39ff14]">Optimization</span> to sync data</p>
+          </div>
         </div>
-        <div>
-          <p className="text-[14px] font-bold text-white m-0">Efficiency Savings</p>
-          <p className="text-[12px] text-gray-500 m-0 mt-1">Run <strong className="text-purple-400">Optimize Route</strong> to compute fuel, time & CO₂ savings.</p>
+        <div className="hidden md:flex items-center gap-2">
+           {[...Array(3)].map((_, i) => (
+             <div key={i} className="w-24 h-8 rounded-lg bg-white/[0.02] border border-white/5" />
+           ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="savings-card savings-card--active slide-in">
+    <div className="glass-panel p-5 slide-in border-white/5 relative overflow-hidden">
+        {/* Background Accent */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#39ff14]/[0.02] blur-[100px] pointer-events-none" />
+
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-2.5">
-        <div className="flex items-center gap-2.5">
-          <div className="savings-card__icon shrink-0">
-            <TrendingDown size={16} className="text-white" />
+      <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-[42px] h-[42px] rounded-xl bg-[#39ff14]/10 border border-[#39ff14]/20 flex items-center justify-center">
+            <TrendingDown size={20} className="text-[#39ff14]" />
           </div>
           <div>
-            <p className="text-[13px] font-bold text-white m-0">Efficiency Savings</p>
-            <p className="text-[11px] text-gray-500 m-0">
-              {s.stops} critical bins · <strong>Closed-loop City Circuit</strong> (incl. return)
-            </p>
+            <p className="text-[10px] font-black text-[#85967c] uppercase tracking-[0.25em] mb-0.5">Fleet Performance</p>
+            <p className="text-lg font-black text-white leading-none tracking-tight">Efficiency Savings</p>
           </div>
         </div>
 
-        {/* Distance comparison */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="savings-dist-badge savings-dist-badge--before">
-            All bins: {s.eff_unopt} km
-          </span>
-          <ArrowRight size={12} className="text-gray-700" />
-          <span className="savings-dist-badge savings-dist-badge--after">
-            Critical only: {s.eff_opt} km
-          </span>
-          <span className="savings-dist-badge savings-dist-badge--total">
-            ₹{s.costSaved} saved · {s.pct}% shorter
-          </span>
+        {/* Distance comparison Readout */}
+        <div className="flex items-center gap-2 flex-wrap bg-white/[0.03] p-1.5 rounded-xl border border-white/5">
+          <div className="px-3 py-2 flex flex-col">
+            <span className="text-[8px] font-black text-[#85967c] uppercase mb-0.5 tracking-tighter">Raw Path</span>
+            <span className="text-[11px] font-black tabular-nums">{s.eff_unopt} km</span>
+          </div>
+          <ArrowRight size={14} className="text-[#292a2f]" />
+          <div className="px-3 py-2 flex flex-col bg-[#39ff14]/10 border border-[#39ff14]/10 rounded-lg">
+            <span className="text-[8px] font-black text-[#39ff14] uppercase mb-0.5 tracking-tighter">Optimized</span>
+            <span className="text-[11px] font-black tabular-nums text-white">{s.eff_opt} km</span>
+          </div>
+          <div className="px-4 py-2 flex flex-col bg-white/5 rounded-lg">
+            <span className="text-[8px] font-black text-[#baccb0] uppercase mb-0.5 tracking-tighter">Net Gain</span>
+            <span className="text-[11px] font-black text-[#39ff14]">₹{s.costSaved}</span>
+          </div>
         </div>
       </div>
 
       {/* Metrics grid */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-2.5 my-2">
-        <Metric icon={Clock} label="Time saved" value={s.timeSaved} unit="min" colorClass="text-blue-400" borderClass="border-blue-400/20" bgClass="bg-blue-400/5" delay={0} />
-        <Metric icon={Fuel} label="Fuel saved" value={s.fuelSaved} unit="L" colorClass="text-amber-500" borderClass="border-amber-500/20" bgClass="bg-amber-500/5" delay={60} />
-        <Metric icon={Leaf} label="CO₂ reduced" value={s.co2Saved} unit="kg" colorClass="text-emerald-400" borderClass="border-emerald-400/20" bgClass="bg-emerald-400/5" delay={120} />
-        <Metric icon={TrendingDown} label="Distance saved" value={s.eff_saved} unit="km" colorClass="text-purple-400" borderClass="border-purple-400/20" bgClass="bg-purple-400/5" delay={180} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <Metric icon={Clock} label="Operational Time" value={s.timeSaved} unit="min" color="#00dbe9" delay={0} />
+        <Metric icon={Fuel} label="Substrate Fuel" value={s.fuelSaved} unit="L" color="#f59e0b" delay={60} />
+        <Metric icon={Leaf} label="CO₂ Mitigation" value={s.co2Saved} unit="kg" color="#39ff14" delay={120} />
+        <Metric icon={TrendingDown} label="Grid Distance" value={s.eff_saved} unit="km" color="#a855f7" delay={180} />
       </div>
 
       {/* Efficiency progress bar */}
-      <div>
-        <div className="flex justify-between mb-1.5">
-          <span className="text-[11px] text-gray-500">Route efficiency improvement</span>
-          <span className="text-[11px] font-bold text-emerald-400">{s.pct}%</span>
+      <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/5 relative overflow-hidden">
+        <div className="flex justify-between items-end mb-3">
+          <div className="flex flex-col">
+             <span className="text-[9px] font-black text-[#85967c] uppercase tracking-[0.2em] mb-1">Route Efficiency Delta</span>
+             <span className="text-[11px] font-bold text-[#baccb0]">Real-time OR-Tools analysis active</span>
+          </div>
+          <div className="text-right">
+             <span className="text-2xl font-black text-[#39ff14] tracking-tighter">{s.pct}%</span>
+          </div>
         </div>
-        <div className="savings-progress-track">
+        <div className="h-1.5 w-full bg-[#121318] rounded-full overflow-hidden border border-white/5">
           <div 
-            className="savings-progress-fill"
+            className="h-full bg-gradient-to-r from-emerald-600 to-[#39ff14] shadow-[0_0_12px_rgba(57,255,20,0.3)] transition-all duration-1000 ease-out"
             style={{ width: `${Math.min(100, parseFloat(s.pct))}%` }} 
           />
         </div>
-        <p className="text-[10px] text-gray-600 mt-1.5">
-          {s.hasRealDistances
-            ? "Real OR-Tools distances · 4.5 km/L diesel truck @ ₹93/L"
-            : "Estimated from stop count — add GPS coords for real figures"}
+        <p className="text-[8px] font-black text-[#85967c] mt-3 uppercase tracking-[0.2em] flex items-center gap-2">
+          <div className="w-1 h-1 rounded-full bg-[#39ff14]" />
+          Engine: {s.hasRealDistances ? "Synchronized GPS Matrix" : "Synthetic Estimation Mode"}
         </p>
       </div>
     </div>
   );
 }
+

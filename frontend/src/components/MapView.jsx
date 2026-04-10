@@ -23,39 +23,46 @@ L.Icon.Default.mergeOptions({
 /* ── Custom Icons ── */
 const makeIcon = (color, pulse = false) =>
   L.divIcon({
-    className: "",
+    className: "custom-div-icon",
     html: `
-      <div class="relative w-[28px] h-[28px]">
-        ${pulse ? `<div class="absolute -inset-[6px] rounded-full animate-ping opacity-20" style="background:${color};"></div>` : ""}
-        <div class="w-[28px] h-[28px] border-[3px] border-white/90 rounded-[50%_50%_50%_0] -rotate-45" style="background:${color};box-shadow:0 2px 12px ${color}88;"></div>
+      <div style="position:relative;width:14px;height:14px;display:flex;items-center:center;justify-content:center;">
+        ${pulse ? `<div style="position:absolute;inset:-4px;border-radius:2px;transform:rotate(45deg);background:${color};opacity:0.25;animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : ""}
+        <div style="width:14px;height:14px;transform:rotate(45deg);border:1px solid rgba(255,255,255,0.4);border-radius:2px;background:${color};box-shadow:0 0 10px ${color}88;"></div>
+        <div style="position:absolute;width:4px;height:4px;background:white;border-radius:50%;opacity:0.8;"></div>
       </div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 
 const makeDepotIcon = () =>
   L.divIcon({
-    className: "",
+    className: "custom-div-icon",
     html: `
-      <div class="relative w-[34px] h-[34px]">
-        <div class="absolute -inset-[8px] rounded-full bg-blue-500/25 animate-pulse"></div>
-        <div class="w-[34px] h-[34px] bg-blue-600 border-[3px] border-white rounded-[10px] flex items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.6)] text-[18px]">🏭</div>
+      <div style="position:relative;width:24px;height:24px;">
+        <div style="position:absolute;inset:-3px;border-radius:6px;transform:rotate(45deg);background:rgba(0,219,233,0.15);animation:pulse 2s infinite;"></div>
+        <div style="width:24px;height:24px;background:#121318;border:1.5px solid #00dbe9;transform:rotate(45deg);border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(0,219,233,0.3);">
+          <div style="transform:rotate(-45deg);font-size:12px;">🏭</div>
+        </div>
       </div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 34],
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
 
 const makeTruckIcon = () =>
   L.divIcon({
-    className: "",
-    html: `<div class="text-[26px] drop-shadow-lg animate-bounce">🚛</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    className: "custom-div-icon",
+    html: `
+      <div style="filter:drop-shadow(0 0 10px rgba(57,255,20,0.4));">
+        <div style="font-size:24px;animation:bounce 1.5s infinite;">🚛</div>
+      </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
 
 function buildLocations(statuses) {
   const locs = {};
-  Object.values(statuses || {}).forEach((s) => {
+  if (!statuses) return locs;
+  Object.values(statuses).forEach((s) => {
     if (s?.latitude != null && s?.longitude != null) {
       locs[s.bin_id] = [s.latitude, s.longitude];
     }
@@ -101,8 +108,8 @@ function AnimatedTruck({ routeCoords }) {
     segRef.current = 0;
     setTruckPos(routeCoords[0]);
 
-    const STEPS_PER_SEG = 8;
-    const INTERVAL_MS = 30;
+    const STEPS_PER_SEG = 5;
+    const INTERVAL_MS = 7;
 
     const id = setInterval(() => {
       const seg = stepRef.current;
@@ -136,10 +143,10 @@ function AnimatedTruck({ routeCoords }) {
 /* ── Map Legend ── */
 function MapLegend({ threshold }) {
   const items = [
-    { color: "#3b82f6", label: "Depot", glow: "#3b82f6" },
-    { color: "#22c55e", label: `Normal (<${threshold - 30}%)`, glow: "#22c55e" },
+    { color: "#00dbe9", label: "Depot", glow: "#00dbe9" },
+    { color: "#39ff14", label: `Normal (<${threshold - 30}%)`, glow: "#39ff14" },
     { color: "#f59e0b", label: `Warning (<${threshold}%)`, glow: "#f59e0b" },
-    { color: "#ef4444", label: `Critical (>${threshold}%)`, glow: "#ef4444" },
+    { color: "#ff4d4d", label: `Critical (>${threshold}%)`, glow: "#ff4d4d" },
     { color: "#a855f7", label: "Route Path", glow: "#a855f7" },
   ];
 
@@ -177,9 +184,9 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
         {showPredictiveMap && predictiveData && predictiveData.map((p) => {
           if (!p.latitude || !p.longitude) return null;
           const risk = p.spillover_risk;
-          const radius = risk > 80 ? 40 : risk > 50 ? 25 : 15;
-          const opacity = risk > 80 ? 0.4 : risk > 50 ? 0.3 : 0.2;
-          const color = risk > 80 ? "#ef4444" : risk > 50 ? "#f59e0b" : "#3b82f6";
+          const radius = risk > 80 ? 25 : risk > 50 ? 18 : 12;
+          const opacity = risk > 80 ? 0.3 : risk > 50 ? 0.2 : 0.15;
+          const color = risk > 80 ? "#ff4d4d" : risk > 50 ? "#f59e0b" : "#00dbe9";
           return (
             <CircleMarker
               key={`pred-${p.bin_id}`}
@@ -189,16 +196,14 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
                 color: color,
                 fillColor: color,
                 fillOpacity: opacity,
-                weight: 0
+                weight: 1,
+                dashArray: "2, 4"
               }}
             >
               <Popup className="custom-popup">
-                <div className="flex items-center gap-2 font-black text-amber-500 uppercase text-[10px] tracking-widest leading-none mb-1">
-                  <span>⚡</span> AI Forecast
+                <div className="flex items-center justify-center">
+                  <span className="text-[14px] font-black" style={{ color }}>{p.spillover_risk}</span>
                 </div>
-                <p className="font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">Node {p.bin_id}</p>
-                <div className="text-xs font-bold" style={{ color }}>Spillover Risk: {p.spillover_risk}%</div>
-                <div className="text-[9px] text-slate-400 mt-1 uppercase tracking-tighter">Predicted within 24h</div>
               </Popup>
             </CircleMarker>
           );
@@ -210,14 +215,13 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
           const pct = s.fill_pct ?? 0;
           const isCritical = s.is_alert || pct >= threshold;
           const isWarning = pct >= threshold - 30;
-          const color = isDepot ? "#3b82f6" : isCritical ? "#ef4444" : isWarning ? "#f59e0b" : "#22c55e";
+          const color = isDepot ? "#00dbe9" : isCritical ? "#ff4d4d" : isWarning ? "#f59e0b" : "#39ff14";
 
           return (
             <Marker key={s.bin_id} position={[s.latitude, s.longitude]} icon={isDepot ? makeDepotIcon() : makeIcon(color, isCritical)}>
               <Popup className="custom-popup">
-                <div className="p-1">
-                  <p className="font-bold text-slate-900">{isDepot ? "Regional Depot" : `Node ${s.bin_id}`}</p>
-                  {!isDepot && <p className="text-xs font-bold" style={{ color }}>Status: {pct.toFixed(1)}% Full</p>}
+                <div className="flex items-center justify-center">
+                  <span className="text-[14px] font-black text-white">{isDepot ? "H" : pct.toFixed(0)}</span>
                 </div>
               </Popup>
             </Marker>
@@ -226,8 +230,8 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
 
         {routeCoords.length > 1 && (
           <>
-            <Polyline positions={routeCoords} color="#a855f7" weight={4} opacity={0.8} dashArray="10 10" />
-            <Polyline positions={routeCoords} color="#a855f7" weight={8} opacity={0.15} />
+            <Polyline positions={routeCoords} color="#a855f7" weight={4} opacity={0.6} dashArray="8 8" />
+            <Polyline positions={routeCoords} color="#a855f7" weight={10} opacity={0.1} />
             {!optimizing && <AnimatedTruck routeCoords={routeCoords} />}
           </>
         )}
@@ -252,21 +256,23 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
     const coords = route.map(id => locations[id]).filter(Boolean);
     if (coords.length < 2) return;
 
+    // Show straight lines immediately while fetching road-following path
+    setRoadPath(coords);
+
     fetch(`https://router.project-osrm.org/route/v1/driving/${coords.map(c => `${c[1]},${c[0]}`).join(";")}?overview=full&geometries=geojson`)
       .then(r => r.json())
       .then(data => {
         if (data.routes?.[0]) {
-          setRoadPath(data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]));
-        } else {
-          setRoadPath(coords);
+          const lats = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          setRoadPath(lats);
         }
-      }).catch(() => setRoadPath(coords));
+      }).catch(() => {});
   }, [routeSignature, JSON.stringify(locations)]);
 
   const displayPath = roadPath || (route?.map(id => locations[id]).filter(Boolean) || []);
 
   const Header = ({ isModal }) => (
-    <div className="flex items-center justify-between px-5 py-3 bg-slate-900/40 border-b border-white/5 backdrop-blur-xl">
+    <div className="flex items-center justify-between px-5 py-3 bg-[#1a1b21]/40 border-b border-white/5 backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <div className="relative flex items-center justify-center">
           <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></div>

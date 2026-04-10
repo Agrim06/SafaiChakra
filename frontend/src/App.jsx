@@ -20,7 +20,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [threshold, setThreshold] = useState(70);
+  const [threshold, setThreshold] = useState(60);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isLive, setIsLive] = useState(false);
   const [error, setError] = useState(null);
@@ -123,10 +123,10 @@ export default function App() {
   const activeStatus = useMemo(() => activeBin ? statuses[activeBin] : null, [activeBin, statuses]);
 
   return (
-    <div className="h-screen flex flex-col bg-[#05070a] text-white selection:bg-green-500/30 font-inter antialiased overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#121318] text-[#e3e1e9] selection:bg-[#39ff14]/30 font-inter antialiased overflow-hidden">
       <Navbar lastUpdated={lastUpdated} isLive={isLive} />
 
-      <main className="flex-1 overflow-hidden px-6 py-4 flex flex-col mt-16">
+      <main className="flex-1 overflow-hidden px-8 py-6 flex flex-col mt-16 slide-in">
         {error && (
           <div className="glass-panel border-red-500/20 bg-red-500/5 mb-4 px-4 py-3 flex items-center justify-between animate-in fade-in slide-in-from-top-4 shrink-0">
             <div className="flex items-center gap-3"><Zap size={16} className="text-red-400" /><p className="text-sm font-medium text-red-200">{error}</p></div>
