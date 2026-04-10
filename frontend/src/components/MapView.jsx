@@ -485,23 +485,34 @@ export default function MapView({ route, optimizing, status, statuses, threshold
     return ccw(p1,p3,p4) !== ccw(p2,p3,p4) && ccw(p1,p2,p3) !== ccw(p1,p2,p4);
   }
 
+  function getIntersection(p1, p2, p3, p4) {
+    const x1 = p1[0], y1 = p1[1], x2 = p2[0], y2 = p2[1];
+    const x3 = p3[0], y3 = p3[1], x4 = p4[0], y4 = p4[1];
+    const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+    if (denom === 0) return null;
+    const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+    return [x1 + ua * (x2 - x1), y1 + ua * (y2 - y1)];
+  }
+
   function getDetourWaypoint(from, to, trafficSegs) {
     for (const seg of trafficSegs) {
       if (segmentsIntersect(from, to, seg[0], seg[1])) {
+        const inter = getIntersection(from, to, seg[0], seg[1]) || [(from[0]+to[0])/2, (from[1]+to[1])/2];
+        
         // Perpendicular vector to the traffic segment
         const dx = seg[1][0] - seg[0][0];
         const dy = seg[1][1] - seg[0][1];
         const len = Math.sqrt(dx*dx + dy*dy) || 1;
         const perpLat = -dy / len;
         const perpLon =  dx / len;
-        // Tight 300m offset to signal OSRM without causing hallucinations
-        const offset = 0.003;
-        // Use the midpoint of the route LEG (or specific intersection) as basis
-        const midLat = (from[0] + to[0]) / 2;
-        const midLon = (from[1] + to[1]) / 2;
-        // Two candidate detour points (either side of the traffic line)
-        const cand1 = [midLat + perpLat * offset, midLon + perpLon * offset];
-        const cand2 = [midLat - perpLat * offset, midLon - perpLon * offset];
+        
+        // 400m offset to signal OSRM to take a different street
+        const offset = 0.004;
+        
+        // Two candidate detour points
+        const cand1 = [inter[0] + perpLat * offset, inter[1] + perpLon * offset];
+        const cand2 = [inter[0] - perpLat * offset, inter[1] - perpLon * offset];
+        
         // Pick the candidate that does NOT re-cross the traffic line from `from`
         const cross1 = segmentsIntersect(from, cand1, seg[0], seg[1]);
         const chosen = cross1 ? cand2 : cand1;
@@ -572,10 +583,15 @@ export default function MapView({ route, optimizing, status, statuses, threshold
       }
     }
     
-    console.log('[Route] Final OSRM points:', waypointCoords.length, '(', binCoords.length, 'bins +', waypointCoords.length - binCoords.length, 'detours)');
-
-    // Final safety clip
-    const limited = waypointCoords.slice(0, maxWaypoints);
+    // Clamp to OSRM's 25-waypoint limit, but ALWAYS preserve the last point (Depot)
+    let limited = waypointCoords;
+    if (waypointCoords.length > maxWaypoints) {
+      console.warn("[Route] Exceeded 25 waypoints. Clipping detours to preserve start/end integrity.");
+      limited = [
+        ...waypointCoords.slice(0, maxWaypoints - 1),
+        waypointCoords[waypointCoords.length - 1]
+      ];
+    }
 
     // Use resilient OSRM fetcher
     const coordString = limited.map(c => `${c[1]},${c[0]}`).join(";");

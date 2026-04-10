@@ -74,8 +74,9 @@ def _leg_intersects_traffic(start_coord, end_coord, traffic_lines, buffer_km=0.1
         # Bounding box filter for the whole scribble
         lats = [p[0] for p in pts]
         lons = [p[1] for p in pts]
-        line_min_lat, line_max_lat = min(lats), max(lats)
-        line_min_lon, line_max_lon = min(lons), max(lons)
+        # Add 0.001 buffer to the scribble box to catch "NEAR" cases correctly
+        line_min_lat, line_max_lat = min(lats) - 0.001, max(lats) + 0.001
+        line_min_lon, line_max_lon = min(lons) - 0.001, max(lons) + 0.001
         
         if (leg_max_lat < line_min_lat or leg_min_lat > line_max_lat or
             leg_max_lon < line_min_lon or leg_min_lon > line_max_lon):
@@ -151,7 +152,7 @@ def _build_distance_matrix(coords: List[Tuple[float, float]], traffic_lines: Lis
                         if penalty > 0:
                             cost += penalty
                             label = "CROSS" if penalty >= 2000000 else "NEAR"
-                            print(f"[TSP] {label} weight {i}->{j} added.")
+                            print(f"[TSP] {label} weight applied for leg {i}->{j} ({bin_ids[i]} to {bin_ids[j]}).")
                     modified_row.append(cost)
                 matrix.append(modified_row)
             print("[TSP] Using real-world OSRM driving distance matrix (with traffic penalties).")
@@ -178,6 +179,11 @@ def optimize_route(
     If fewer than 2 bins are provided the list is returned as-is.
     """
     n = len(bin_ids)
+
+    if n == 0:
+        return [], []
+    if n == 1:
+        return bin_ids, [0.0]
 
     if n > 15:
         time_limit_seconds = max(time_limit_seconds, 20)
