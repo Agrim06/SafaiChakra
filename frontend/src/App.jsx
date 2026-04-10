@@ -25,7 +25,7 @@ export default function App() {
   const [isLive, setIsLive] = useState(false);
   const [error, setError] = useState(null);
   const [toastHidden, setToastHidden] = useState(false);
-  
+
   // Hackathon AI Feature
   const [showPredictiveMap, setShowPredictiveMap] = useState(false);
   const [predictiveData, setPredictiveData] = useState(null);
@@ -37,7 +37,7 @@ export default function App() {
       const uiBins = data
         .filter(id => !id.toLowerCase().includes("depot"))
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-      
+
       setAllBins(uiBins);
       if (uiBins.length > 0) setActiveBin(prev => prev ?? uiBins[0]);
       return data;
@@ -176,11 +176,11 @@ export default function App() {
             />
 
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
-            
+
             <footer className="pb-6 border-t border-white/5 pt-6 flex flex-col items-center gap-4">
               <div className="text-center space-y-1">
                 <p className="text-[9px] uppercase tracking-[0.4em] text-slate-600 font-black">SafaiChakra Intelligence System</p>
-                <p className="text-[8px] text-slate-800 font-bold uppercase tracking-widest leading-relaxed">Smart Waste Collection Route Optimizer<br/>© {new Date().getFullYear()}</p>
+                <p className="text-[8px] text-slate-800 font-bold uppercase tracking-widest leading-relaxed">Smart Waste Collection Route Optimizer<br />© {new Date().getFullYear()}</p>
               </div>
             </footer>
           </section>

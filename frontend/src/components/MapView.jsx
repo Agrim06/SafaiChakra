@@ -10,7 +10,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Map, Maximize2, X, Navigation } from "lucide-react";
+import { Map, Maximize2, X, Navigation, LocateFixed } from "lucide-react";
 
 // Fix for default Leaflet icon paths in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -64,14 +64,14 @@ function buildLocations(statuses) {
 }
 
 /* ── Auto-fit bounds logic ── */
-function MapController({ route, locations }) {
+function MapController({ route, locations, recenterTrigger }) {
   const map = useMap();
 
   useEffect(() => {
     const updateMap = () => {
       map.invalidateSize();
       const coords = route?.map((id) => locations[id]).filter(Boolean) || [];
-      
+
       if (coords.length > 1) {
         map.fitBounds(coords, { padding: [70, 70], animate: true });
       } else {
@@ -84,7 +84,7 @@ function MapController({ route, locations }) {
 
     const timer = setTimeout(updateMap, 300);
     return () => clearTimeout(timer);
-  }, [route, locations, map]);
+  }, [route, locations, map, recenterTrigger]);
 
   return null;
 }
@@ -118,7 +118,7 @@ function AnimatedTruck({ routeCoords }) {
 
       const from = routeCoords[stepRef.current];
       const to = routeCoords[Math.min(stepRef.current + 1, routeCoords.length - 1)];
-      if(!from || !to) return;
+      if (!from || !to) return;
 
       setTruckPos([
         from[0] + (to[0] - from[0]) * Math.min(t, 1),
@@ -159,7 +159,7 @@ function MapLegend({ threshold }) {
 }
 
 /* ── Main Canvas ── */
-function MapCanvas({ route, optimizing, statuses, locations, routeCoords, threshold, showPredictiveMap, predictiveData }) {
+function MapCanvas({ route, optimizing, statuses, locations, routeCoords, threshold, showPredictiveMap, predictiveData, recenterTrigger }) {
   const center = locations["DEPOT_00"] || [12.3106, 76.6450];
 
   return (
@@ -232,9 +232,9 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
           </>
         )}
 
-        <MapController route={route} locations={locations} />
+        <MapController route={route} locations={locations} recenterTrigger={recenterTrigger} />
       </MapContainer>
-      
+
       <MapLegend threshold={threshold} />
     </div>
   );
@@ -243,6 +243,7 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
 export default function MapView({ route, optimizing, statuses, threshold = 70, showPredictiveMap, predictiveData }) {
   const [expanded, setExpanded] = useState(false);
   const [roadPath, setRoadPath] = useState(null);
+  const [recenterCount, setRecenterCount] = useState(0);
   const locations = buildLocations(statuses);
   const routeSignature = route?.join("-") || "none";
 
@@ -278,15 +279,25 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         {optimizing && (
-          <span className="flex items-center gap-2 text-[10px] font-black text-purple-400 uppercase tracking-widest">
-            <Navigation size={12} className="animate-pulse" /> 
+          <span className="flex items-center gap-2 text-[10px] font-black text-purple-400 uppercase tracking-widest mr-2">
+            <Navigation size={12} className="animate-pulse" />
             Pathing...
           </span>
         )}
-        <button 
-          onClick={() => setExpanded(!isModal)} 
+        
+        <button
+          onClick={() => setRecenterCount(v => v + 1)}
+          className="p-1.5 hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-white border border-transparent hover:border-white/10 group flex items-center gap-2 pr-3"
+          title="Recenter Map"
+        >
+          <LocateFixed size={16} className="group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">Recenter</span>
+        </button>
+
+        <button
+          onClick={() => setExpanded(!isModal)}
           className="p-1.5 hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-white border border-transparent hover:border-white/10"
         >
           {isModal ? <X size={16} /> : <Maximize2 size={16} />}
@@ -300,15 +311,16 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
       <div className="glass-panel flex flex-col overflow-hidden h-full border-white/5 shadow-2xl">
         <Header isModal={false} />
         <div className="flex-1 relative">
-          <MapCanvas 
-            route={route} 
-            optimizing={optimizing} 
-            statuses={statuses} 
-            locations={locations} 
-            routeCoords={displayPath} 
+          <MapCanvas
+            route={route}
+            optimizing={optimizing}
+            statuses={statuses}
+            locations={locations}
+            routeCoords={displayPath}
             threshold={threshold}
             showPredictiveMap={showPredictiveMap}
             predictiveData={predictiveData}
+            recenterTrigger={recenterCount}
           />
         </div>
       </div>
@@ -318,15 +330,16 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
           <div className="w-full max-w-[1800px] mx-auto h-full flex flex-col rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
             <Header isModal={true} />
             <div className="flex-1 relative">
-              <MapCanvas 
-                route={route} 
-                optimizing={optimizing} 
-                statuses={statuses} 
-                locations={locations} 
-                routeCoords={displayPath} 
+              <MapCanvas
+                route={route}
+                optimizing={optimizing}
+                statuses={statuses}
+                locations={locations}
+                routeCoords={displayPath}
                 threshold={threshold}
                 showPredictiveMap={showPredictiveMap}
                 predictiveData={predictiveData}
+                recenterTrigger={recenterCount}
               />
             </div>
           </div>

@@ -10,17 +10,21 @@
   /* Deep Space Backgrounds */
   --color-bg: #05070a;
   --color-surface: #0b0f1a;
-  
+
   /* Glassmorphism & Cards */
   --color-card: rgba(17, 24, 39, 0.45);
   --color-card-border: rgba(255, 255, 255, 0.08);
   --color-overlay: rgba(5, 7, 10, 0.9);
 
   /* Brand / Status (Neon Palette) */
-  --color-green: #00f5a0;    /* Neon Mint */
-  --color-amber: #ffb800;    /* Cyber Gold */
-  --color-red: #ff4d4d;      /* Electric Red */
-  --color-purple: #7000ff;   /* Vivid Purple */
+  --color-green: #00f5a0;
+  /* Neon Mint */
+  --color-amber: #ffb800;
+  /* Cyber Gold */
+  --color-red: #ff4d4d;
+  /* Electric Red */
+  --color-purple: #7000ff;
+  /* Vivid Purple */
   --color-blue: #3b82f6;
 
   /* Text */
@@ -41,7 +45,9 @@
 }
 
 /* ── Reset & Base ───────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -64,7 +70,10 @@ body {
 }
 
 /* ── Typography ─────────────────────────────────────────────── */
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   letter-spacing: -0.02em;
   font-weight: 700;
   color: #fff;
@@ -111,21 +120,42 @@ h1, h2, h3, h4 {
 
 /* ── Animations ─────────────────────────────────────────────── */
 @keyframes map-pulse {
-  0% { transform: scale(0.8); opacity: 0.8; }
-  100% { transform: scale(2.4); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
 }
 
 @keyframes slide-in {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.slide-in { animation: slide-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.spinner { animation: spin 0.8s linear infinite; }
+.slide-in {
+  animation: slide-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
 
 /* ── Form Elements ──────────────────────────────────────────── */
 
@@ -154,7 +184,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: #fff;
   border: 3px solid var(--color-bg);
   border-radius: 50%;
-  box-shadow: 0 0 12px rgba(0,0,0,0.5);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
   cursor: pointer;
   transition: transform 0.2s ease;
 }
@@ -185,13 +215,16 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.1);
-}
+}
