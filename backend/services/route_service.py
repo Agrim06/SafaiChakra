@@ -71,6 +71,14 @@ def get_priority_bins(
             if risk >= 80:
                 is_priority = True
 
+        # 3. Opportunistic Rule: Medium fill bins (e.g. 45%+) with moderate risk
+        # This provides examples of picking up medium fill bins to prevent future spillovers
+        # when the fleet is already active.
+        if not is_priority and r.fill_pct >= 45:
+            risk = calculate_predictive_risk(r.bin_id, r.fill_pct)
+            if risk >= 75
+                is_priority = True
+
         if is_priority:
             priority_bins.append(r)
 
