@@ -60,7 +60,8 @@ class RouteResponse(BaseModel):
     total_city_bins:          int    # total bins in the city (with GPS)
     distances:                List[float]  # per-leg distances (km) for the optimised route
     optimized_distance_km:    float        # TSP-optimal distance (critical bins only)
-    unoptimized_distance_km:  float        # naive sequential distance (ALL city bins)
+    unoptimized_distance_km:  float        # straight-line tour visiting ALL city bins (Haversine)
+    baseline_distance_km:     float = 0.0  # driving tour, same priority stops, fixed insertion order
 
 
 class TrafficZoneItem(BaseModel):
@@ -89,6 +90,11 @@ class OptimizeRouteRequest(BaseModel):
         default="penalize",
         alias="trafficMode",
         description='How to use traffic: "penalize" (multiply cost) or "avoid" (near-infinite cost).',
+    )
+    use_spillover_prediction: bool = Field(
+        default=False,
+        alias="useSpilloverPrediction",
+        description="If true, include below-threshold bins with high ML spillover risk (after user ran predict).",
     )
 
     @field_validator("traffic_mode")

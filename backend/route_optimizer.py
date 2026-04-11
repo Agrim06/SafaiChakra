@@ -3,11 +3,24 @@
 from __future__ import annotations
 
 import math
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
+
+OSRM_BASE = "https://router.project-osrm.org"
+_tls = threading.local()
+
+
+def _http_session() -> requests.Session:
+    s = getattr(_tls, "session", None)
+    if s is None:
+        s = requests.Session()
+        s.headers.update({"User-Agent": "SafaiChakraRouteOptimizer/1.0"})
+        _tls.session = s
+    return s
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -51,7 +64,7 @@ def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]
         
     # OSRM expects lon,lat format
     coord_string = ";".join([f"{lon},{lat}" for lat, lon in coords])
-    url = f"http://router.project-osrm.org/table/v1/driving/{coord_string}?annotations=distance"
+    url = f"{OSRM_BASE}/table/v1/driving/{coord_string}?annotations=distance"
     
     try:
         resp = requests.get(url, timeout=5)
@@ -69,9 +82,25 @@ def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]
     return _build_haversine_matrix(coords)
 
 
+def naive_loop_driving_km(matrix: List[List[int]]) -> float:
+    """
+    Total driving km for visiting nodes in index order 0→1→…→n-1→0
+    (matches depot-first insertion order before TSP reordering).
+    """
+    n = len(matrix)
+    if n < 2:
+        return 0.0
+    m = 0
+    for i in range(n - 1):
+        m += matrix[i][i + 1]
+    m += matrix[n - 1][0]
+    return round(m / 1000.0, 3)
+
+
 # ── traffic geometry (straight bin-to-bin edges vs traffic segments) ───────
 
 _TRAFFIC_LARGE = 10**9
+_TRAFFIC_PENALTY_MULT = 4
 
 
 def _segments_intersect(
@@ -182,9 +211,43 @@ def _zone_touches_edge(
     if not seg:
         return False
     za, zb = seg
+    return _chord_near_traffic_segment(p1, p2, za, zb, corridor_m)
+
+
+def _chord_near_traffic_segment(
+    p1: Tuple[float, float],
+    p2: Tuple[float, float],
+    za: Tuple[float, float],
+    zb: Tuple[float, float],
+    corridor_m: float = 320.0,
+) -> bool:
     if _segments_intersect(p1, p2, za, zb):
         return True
     return _min_dist_segment_to_segment_m(p1, p2, za, zb) < corridor_m
+
+
+def _traffic_segments(
+    traffic_zones: Optional[List[Dict[str, Any]]],
+) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
+    if not traffic_zones:
+        return []
+    segs: List[Tuple[Tuple[float, float], Tuple[float, float]]] = []
+    for z in traffic_zones:
+        seg = _zone_to_segment(z)
+        if seg:
+            segs.append(seg)
+    return segs
+
+
+def _edge_affects_traffic_segments(
+    p1: Tuple[float, float],
+    p2: Tuple[float, float],
+    segments: List[Tuple[Tuple[float, float], Tuple[float, float]]],
+) -> bool:
+    for za, zb in segments:
+        if _chord_near_traffic_segment(p1, p2, za, zb):
+            return True
+    return False
 
 
 def edge_affects_traffic(
@@ -194,19 +257,25 @@ def edge_affects_traffic(
 ) -> bool:
     if not traffic_zones:
         return False
-    return any(_zone_touches_edge(p1, p2, z) for z in traffic_zones)
+    return _edge_affects_traffic_segments(p1, p2, _traffic_segments(traffic_zones))
 
 
 def _osrm_driving_arc_hits_traffic(
-    lat1: float, lon1: float, lat2: float, lon2: float, traffic_zones: List[Dict[str, Any]]
+    lat1: float,
+    lon1: float,
+    lat2: float,
+    lon2: float,
+    segments: List[Tuple[Tuple[float, float], Tuple[float, float]]],
 ) -> bool:
     """True if OSRM driving geometry between two bins uses a road overlapping drawn traffic."""
+    if not segments:
+        return False
     url = (
-        "https://router.project-osrm.org/route/v1/driving/"
+        f"{OSRM_BASE}/route/v1/driving/"
         f"{lon1},{lat1};{lon2},{lat2}?overview=simplified&geometries=geojson&steps=false"
     )
     try:
-        r = requests.get(url, timeout=7)
+        r = _http_session().get(url, timeout=5)
         data = r.json()
         if data.get("code") != "Ok" or not data.get("routes"):
             return False
@@ -217,20 +286,12 @@ def _osrm_driving_arc_hits_traffic(
         step = max(1, len(latlons) // 35)
         for idx in range(0, len(latlons), step):
             p = latlons[idx]
-            for z in traffic_zones:
-                seg = _zone_to_segment(z)
-                if not seg:
-                    continue
-                za, zb = seg
+            for za, zb in segments:
                 if _dist_m_point_to_segment(p, za, zb) < 40.0:
                     return True
         for idx in range(len(latlons) - 1):
             p1, p2 = latlons[idx], latlons[idx + 1]
-            for z in traffic_zones:
-                seg = _zone_to_segment(z)
-                if not seg:
-                    continue
-                za, zb = seg
+            for za, zb in segments:
                 if _segments_intersect(p1, p2, za, zb) or _min_dist_segment_to_segment_m(p1, p2, za, zb) < 35.0:
                     return True
         return False
@@ -239,13 +300,18 @@ def _osrm_driving_arc_hits_traffic(
 
 
 def _pair_blocked_by_traffic(
-    args: Tuple[int, int, List[Tuple[float, float]], List[Dict[str, Any]]],
+    args: Tuple[
+        int,
+        int,
+        List[Tuple[float, float]],
+        List[Tuple[Tuple[float, float], Tuple[float, float]]],
+    ],
 ) -> Tuple[int, int, bool]:
-    i, j, coords, traffic_zones = args
+    i, j, coords, segments = args
     a, b = coords[i], coords[j]
-    if edge_affects_traffic(a, b, traffic_zones):
+    if _edge_affects_traffic_segments(a, b, segments):
         return i, j, True
-    if _osrm_driving_arc_hits_traffic(a[0], a[1], b[0], b[1], traffic_zones):
+    if _osrm_driving_arc_hits_traffic(a[0], a[1], b[0], b[1], segments):
         return i, j, True
     return i, j, False
 
@@ -257,28 +323,54 @@ def build_traffic_aware_cost_matrix(
     traffic_mode: str = "penalize",
 ) -> List[List[int]]:
     """
-    Copy base driving-distance matrix and forbid arcs whose OSRM driving path hits traffic polylines.
+    penalize: multiply arc cost when driving path hits drawn traffic (or chord is near).
+    avoid: set arcs that hit traffic to near-infinite cost (must run OSRM checks — no chord-only shortcut).
     """
+    mode = (traffic_mode or "penalize").strip().lower()
+    if mode not in ("penalize", "avoid"):
+        mode = "penalize"
+
     n = len(coords)
     out = [row[:] for row in base_matrix]
-    if not traffic_zones:
+    segments = _traffic_segments(traffic_zones)
+    if not segments:
         return out
 
-    pairs: List[Tuple[int, int, List[Tuple[float, float]], List[Dict[str, Any]]]] = [
-        (i, j, coords, traffic_zones) for i in range(n) for j in range(n) if i != j
-    ]
+    pairs: List[
+        Tuple[
+            int,
+            int,
+            List[Tuple[float, float]],
+            List[Tuple[Tuple[float, float], Tuple[float, float]]],
+        ]
+    ] = [(i, j, coords, segments) for i in range(n) for j in range(n) if i != j]
     workers = min(12, max(4, len(pairs) // 8 or 1))
-    if len(pairs) > 280:
+    # Chord-only is too weak for strict avoidance (roads curve into congestion).
+    use_chord_only_fastpath = len(pairs) > 280 and mode == "penalize"
+
+    def apply_traffic_arc(i: int, j: int, hits: bool) -> None:
+        if not hits or i == j:
+            return
+        if mode == "avoid":
+            out[i][j] = _TRAFFIC_LARGE
+            return
+        base_cost = base_matrix[i][j]
+        if base_cost <= 0:
+            return
+        penalized = min(_TRAFFIC_LARGE - 1, int(base_cost * _TRAFFIC_PENALTY_MULT))
+        out[i][j] = max(out[i][j], penalized)
+
+    if use_chord_only_fastpath:
         for i in range(n):
             for j in range(n):
-                if i != j and edge_affects_traffic(coords[i], coords[j], traffic_zones):
-                    out[i][j] = _TRAFFIC_LARGE
+                if i != j and _edge_affects_traffic_segments(coords[i], coords[j], segments):
+                    apply_traffic_arc(i, j, True)
         return out
 
+    chunk = max(2, min(32, len(pairs) // max(workers, 1) or 1))
     with ThreadPoolExecutor(max_workers=workers) as ex:
-        for i, j, bad in ex.map(_pair_blocked_by_traffic, pairs, chunksize=4):
-            if bad:
-                out[i][j] = _TRAFFIC_LARGE
+        for i, j, bad in ex.map(_pair_blocked_by_traffic, pairs, chunksize=chunk):
+            apply_traffic_arc(i, j, bad)
     return out
 
 
@@ -287,9 +379,10 @@ def build_traffic_aware_cost_matrix(
 def optimize_route(
     bin_ids: List[str],
     coords:  List[Tuple[float, float]],   # (latitude, longitude) per bin
-    time_limit_seconds: int = 10,
+    time_limit_seconds: int = 5,
     traffic_zones: Optional[List[Dict[str, Any]]] = None,
     traffic_mode: str = "penalize",
+    base_matrix: Optional[List[List[int]]] = None,
 ) -> Tuple[List[str], List[float]]:
     """
     Solve TSP and return:
@@ -305,11 +398,11 @@ def optimize_route(
     if n == 1:
         return bin_ids, [0.0]
 
-    base_matrix = _build_distance_matrix(coords)
+    base = base_matrix if base_matrix is not None else _build_distance_matrix(coords)
     cost_matrix = (
-        build_traffic_aware_cost_matrix(base_matrix, coords, traffic_zones, traffic_mode)
+        build_traffic_aware_cost_matrix(base, coords, traffic_zones, traffic_mode)
         if traffic_zones
-        else base_matrix
+        else base
     )
 
     # ── OR-Tools setup ───────────────────────────────────────────────────────
@@ -333,7 +426,7 @@ def optimize_route(
         routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
     )
     search_params.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        routing_enums_pb2.LocalSearchMetaheuristic.GREEDY_DESCENT
     )
     search_params.time_limit.seconds = time_limit_seconds
 
@@ -360,7 +453,7 @@ def optimize_route(
         next_node  = manager.IndexToNode(next_index)
 
         # Report real driving distance (not traffic-inflated cost)
-        dist_m = base_matrix[node][next_node]
+        dist_m = base[node][next_node]
         leg_distances.append(round(dist_m / 1000.0, 4))
 
         index = next_index

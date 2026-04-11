@@ -107,10 +107,12 @@ export default function App() {
           });
         }
       }
+      const useSpilloverPrediction = Boolean(showPredictiveMap && predictiveData?.length);
       const { data } = await axios.post(`${API_BASE}/optimize-route`, {
         threshold,
         trafficZones,
         trafficMode: trafficStrictAvoid ? "avoid" : "penalize",
+        useSpilloverPrediction,
       });
       setRouteData(data);
       setError(null);
@@ -119,7 +121,7 @@ export default function App() {
     } finally {
       setOptimizing(false);
     }
-  }, [threshold, trafficStrokes, trafficStrictAvoid]);
+  }, [threshold, trafficStrokes, trafficStrictAvoid, showPredictiveMap, predictiveData]);
 
   const handleSimulateAlert = async () => {
     if (!activeBin) return;
@@ -231,8 +233,6 @@ export default function App() {
               activeBin={activeBin}
               setActiveBin={setActiveBin}
               statuses={statuses}
-              drawTrafficEnabled={drawTrafficEnabled}
-              onToggleDrawTraffic={() => setDrawTrafficEnabled((v) => !v)}
               trafficStrokeCount={trafficStrokes.length}
               onClearTraffic={() => setTrafficStrokes([])}
               trafficStrictAvoid={trafficStrictAvoid}
@@ -259,6 +259,7 @@ export default function App() {
                 predictiveData={predictiveData}
                 trafficStrokes={trafficStrokes}
                 drawTrafficEnabled={drawTrafficEnabled}
+                onToggleDrawTraffic={() => setDrawTrafficEnabled((v) => !v)}
                 onAddTrafficStroke={addTrafficStroke}
               />
             </div>

@@ -8,8 +8,10 @@ All DB queries are isolated here to keep routers thin.
 from __future__ import annotations
 
 import os
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
+from sqlalchemy import Date, cast, func
 from sqlalchemy.orm import Session
 
 import models
@@ -79,19 +81,26 @@ def get_all_bins(db: Session) -> List[str]:
     rows = db.query(models.BinReading.bin_id).distinct().all()
     return [r.bin_id for r in rows]
 
-def calculate_predictive_risk(bin_id: str, current_fill: float) -> int:
-    """
-    Hackathon Feature: Calculates a deterministic simulated 24h risk
-    so the optimizer and the frontend heatmap always agree.
-    """
-    import random
-    if current_fill >= 90:
+
+def get_daily_max_fill_series(db: Session, bin_id: str, days: int = 28) -> List[float]:
+    """Per calendar day, max(fill_pct) for that bin, oldest → newest."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    day_col = cast(models.BinReading.created_at, Date)
+    q = (
+        db.query(day_col, func.max(models.BinReading.fill_pct))
+        .filter(models.BinReading.bin_id == bin_id)
+        .filter(models.BinReading.created_at >= cutoff)
+        .group_by(day_col)
+        .order_by(day_col)
+    )
+    return [float(mx) for _d, mx in q.all()]
+
+
+def calculate_predictive_risk(db: Session, bin_id: str, current_fill: float) -> int:
+    """Next-day spillover risk (0–99) from sklearn model + per-bin daily history."""
+    from services.spillover_ml import predict_next_day_spillover_risk
+
+    if current_fill >= 95:
         return 99
-
-    # Use bin_id to seed deterministic randomness so the heatmap doesn't flicker
-    random.seed(bin_id)
-    velocity = random.uniform(5, 35)
-    random.seed() # reset to completely random
-
-    projected = current_fill + velocity
-    return int(min(projected, 99))
+    daily = get_daily_max_fill_series(db, bin_id, days=28)
+    return predict_next_day_spillover_risk(bin_id, daily, current_fill)
