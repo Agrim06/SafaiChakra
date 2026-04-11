@@ -154,3 +154,22 @@ class SensorSimulateResponse(BaseModel):
     scenario:    str
     description: str
     injected:    str
+
+
+# ─────────────────────────────────────────────
+#  Citizen Report schemas
+# ─────────────────────────────────────────────
+
+class BinReportRequest(BaseModel):
+    location_name: str
+    latitude:      float
+    longitude:     float
+    image_data:    Optional[str] = None # Base64
+
+class BinReportResponse(BaseModel):
+    id:            int
+    location_name: str
+    status:        str
+    created_at:    datetime
+
+    model_config = {"from_attributes": True}

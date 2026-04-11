@@ -1,4 +1,4 @@
-import { Leaf, Activity, Sun, Moon, BarChart2, LayoutDashboard } from "lucide-react";
+import { Leaf, Activity, Sun, Moon, BarChart2, LayoutDashboard, Camera } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar({ lastUpdated, isLive, page, setPage }) {
@@ -14,6 +14,7 @@ export default function Navbar({ lastUpdated, isLive, page, setPage }) {
   const tabs = [
     { id: "dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
     { id: "analytics",  label: "Analytics",  Icon: BarChart2 },
+    { id: "report",     label: "Report Bin", Icon: Camera },
   ];
 
   return (

@@ -9,6 +9,7 @@ import ControlPanel from "./components/ControlPanel";
 import AgentPanel from "./components/AgentPanel";
 import SavingsCard from "./components/SavingsCard";
 import AnalyticsPage from "./components/AnalyticsPage";
+import ReportPage from "./pages/ReportPage";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 const POLL_MS = 300000
@@ -240,6 +241,12 @@ export default function App() {
       {page === "analytics" && (
         <div className="flex-1 overflow-hidden mt-16 slide-in">
           <AnalyticsPage routeData={routeData} />
+        </div>
+      )}
+      
+      {page === "report" && (
+        <div className="flex-1 overflow-hidden mt-16 slide-in">
+          <ReportPage />
         </div>
       )}
 
