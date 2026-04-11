@@ -136,8 +136,8 @@ export default function SavingsCard({ routeData }) {
           />
         </div>
         <div className="hidden sm:flex items-center gap-2.5 text-[9px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter">
-           <div className="w-2 h-2 rounded-full bg-[var(--color-green)] animate-pulse" />
-           {s.hasRealDistances ? "GPS Active" : "Synthetic"}
+           {/* <div className="w-2 h-2 rounded-full bg-[var(--color-green)] animate-pulse" />
+           {s.hasRealDistances ? "GPS Active" : "Synthetic"} */}
         </div>
       </div>
     </div>

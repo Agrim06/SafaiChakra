@@ -36,7 +36,7 @@ export default function ControlPanel({
               const isAbnormal = s && (s.is_alert || s.fill_pct >= threshold);
               return (
                 <option key={id} value={id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
-                  {id === "DEPOT_00" ? "Mission HUB" : `Bin ${parseInt(id.replace("BIN_", ""), 10)}`} {s ? ` — ${s.fill_pct.toFixed(0)}%` : ""} {isAbnormal ? " ⚠ ALERT" : ""}
+                  {id === "DEPOT_00" ? "Main HUB" : id} {s ? ` — ${s.fill_pct.toFixed(0)}%` : ""} {isAbnormal ? " ⚠ ALERT" : ""}
                 </option>
               );
             })}
@@ -90,11 +90,10 @@ export default function ControlPanel({
         {/* Predictive AI Toggle */}
         <button
           onClick={onTogglePredict}
-          className={`active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-sm ${
-            showPredictiveMap 
-              ? "bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/40 text-[var(--color-cyan)]" 
+          className={`active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-sm ${showPredictiveMap
+              ? "bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/40 text-[var(--color-cyan)]"
               : "bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg)]/80"
-          } group`}
+            } group`}
         >
           <span className={`text-[14px] ${showPredictiveMap ? 'animate-bounce' : ''}`}>⚡</span>
           <span className="text-[11.5px] font-bold uppercase tracking-[0.1em]">
@@ -120,7 +119,7 @@ export default function ControlPanel({
         </div>
 
         <div className="relative h-6 flex items-center">
-           <input
+          <input
             type="range" min={30} max={90} value={threshold}
             onChange={e => onThresholdChange(Number(e.target.value))}
             className="absolute inset-0 w-full h-1.5 rounded-full appearance-none cursor-pointer z-10 bg-[var(--color-card-border)]"
@@ -129,7 +128,7 @@ export default function ControlPanel({
             }}
           />
         </div>
-        
+
         <div className="flex justify-between px-1 mt-1">
           <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tight opacity-80">Conservative</span>
           <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tight opacity-80">Aggressive</span>

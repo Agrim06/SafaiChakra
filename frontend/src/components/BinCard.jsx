@@ -89,7 +89,7 @@ export default function BinCard({ status, loading, threshold = 70 }) {
           <div>
             <p className="text-[8px] text-[var(--color-text-dim)] uppercase tracking-[0.2em] font-black mb-0.5">Focus Node</p>
             <p className="text-[19px] font-black text-[var(--color-text)] leading-none tracking-tight">
-              {bin_id === "DEPOT_00" ? "Mission HUB" : `Bin ${parseInt(bin_id.replace("BIN_", ""), 10)}`}
+              {bin_id === "DEPOT_00" ? "Main HUB" : bin_id}
             </p>
           </div>
         </div>

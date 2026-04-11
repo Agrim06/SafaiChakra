@@ -15,14 +15,23 @@ export default function Navbar({ lastUpdated, isLive }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-[1000] px-8 py-3 transition-all duration-500">
       <div className="max-w-[1800px] mx-auto glass-panel border-[var(--color-card-border)] bg-[var(--color-surface)] flex items-center justify-between px-6 py-2.5 shadow-xl relative overflow-hidden">
-        
+
         {/* Animated HUD line */}
         <div className="absolute top-0 left-0 h-[2px] w-full bg-gradient-to-r from-transparent via-[var(--color-green)]/30 to-transparent" />
 
         {/* Logo Section */}
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-[var(--color-green)]/10 border-2 border-[var(--color-green)]/20 flex items-center justify-center group transition-all hover:bg-[var(--color-green)]/20">
-            <Leaf size={18} className="text-[var(--color-green)] group-hover:scale-110 transition-transform" />
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center group transition-all ${
+            theme === 'light' 
+              ? 'bg-[var(--color-bg)] border-2 border-[var(--color-green)] shadow-sm' 
+              : 'bg-[var(--color-green)]/10 border-2 border-[var(--color-green)]/20 hover:bg-[var(--color-green)]/20'
+          }`}>
+            <Leaf 
+              size={18} 
+              className={`transition-transform group-hover:scale-110 ${
+                theme === 'light' ? 'text-[var(--color-green)] fill-[var(--color-bg)]' : 'text-[var(--color-green)]'
+              }`} 
+            />
           </div>
           <div className="flex flex-col">
             <div className="flex items-baseline leading-none">
@@ -46,7 +55,7 @@ export default function Navbar({ lastUpdated, isLive }) {
           </div>
 
           {/* Integrated Theme Toggle */}
-          <button 
+          <button
             onClick={toggleTheme}
             className="p-2 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-[var(--color-green)] transition-all shadow-sm active:scale-95"
             title="Toggle Theme"
