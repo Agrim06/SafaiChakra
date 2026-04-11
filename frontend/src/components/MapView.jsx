@@ -66,7 +66,7 @@ const makePinIcon = (status, threshold) => {
   return L.divIcon({
     className: "",
     html: `
-      <div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-10px);">
+      <div style="display:flex;flex-direction:column;align-items:center;">
         
         <!-- 🔴 HEAD -->
         <div style="
@@ -100,28 +100,10 @@ const makePinIcon = (status, threshold) => {
         margin-top:-2px;
         border-radius:2px;
       "></div>
-
-        <!-- 📦 BODY -->
-        <div style="
-          margin-top:2px;
-          padding:4px 6px;
-          border-radius:8px;
-          background:var(--color-surface);
-          border:1px solid var(--color-card-border);
-          font-size:9px;
-          font-weight:800;
-          text-align:center;
-          box-shadow:0 4px 12px rgba(0,0,0,0.2);
-          white-space:nowrap;
-        ">
-          <div style="color:var(--color-text);">${label}</div>
-          <div style="color:${color};">${pct.toFixed(0)}%</div>
-        </div>
-
       </div>
     `,
-    iconSize: [80, 60],
-    iconAnchor: [40, 50],
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
   });
 };
 
