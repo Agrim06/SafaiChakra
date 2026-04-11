@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
-import { Zap, ShieldAlert, Loader2 } from "lucide-react";
+import { Zap, ShieldAlert, Loader2, WifiOff } from "lucide-react";
 
 import Navbar from "./components/Navbar";
 import BinCard from "./components/BinCard";
@@ -35,6 +35,11 @@ export default function App() {
 
   const [trafficStrokes, setTrafficStrokes] = useState([]);
   const [drawTrafficEnabled, setDrawTrafficEnabled] = useState(false);
+
+  // Sensor Health / Failure Detection
+  const [sensorHealth, setSensorHealth] = useState(null);
+  const [sensorToast, setSensorToast] = useState(null);
+  const [sensorToastClosing, setSensorToastClosing] = useState(false);
   // 1. Fetch all known bins
   const fetchAllBins = useCallback(async () => {
     try {
@@ -94,6 +99,55 @@ export default function App() {
     setTrafficStrokes((prev) => [...prev, positions]);
   }, []);
 
+  // ── Sensor Health Polling ──
+  const fetchSensorHealth = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE}/sensor/health`);
+      setSensorHealth(data);
+    } catch (err) {
+      console.error("Sensor health fetch failed", err);
+    }
+  }, []);
+
+  // Fetch sensor health alongside main data
+  useEffect(() => {
+    fetchSensorHealth();
+    const id = setInterval(fetchSensorHealth, POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchSensorHealth]);
+
+  const handleSimulateSensorFailure = useCallback(async (scenario) => {
+    if (!activeBin) return;
+    try {
+      const { data } = await axios.post(`${API_BASE}/sensor/simulate-failure`, {
+        bin_id: activeBin,
+        scenario,
+      });
+      setSensorToast(data);
+      setSensorToastClosing(false);
+      // Refresh sensor health + bin statuses
+      await Promise.all([fetchSensorHealth(), fetchData()]);
+      // Auto-close toast after 6s
+      setTimeout(() => {
+        setSensorToastClosing(true);
+        setTimeout(() => setSensorToast(null), 400);
+      }, 6000);
+    } catch (err) {
+      console.error("Sensor failure simulation failed", err);
+    }
+  }, [activeBin, fetchSensorHealth, fetchData]);
+
+  const handleResetSensor = useCallback(async () => {
+    if (!activeBin) return;
+    try {
+      await axios.post(`${API_BASE}/sensor/reset/${activeBin}`);
+      await Promise.all([fetchSensorHealth(), fetchData()]);
+      setSensorToast(null);
+    } catch (err) {
+      console.error("Sensor reset failed", err);
+    }
+  }, [activeBin, fetchSensorHealth, fetchData]);
+
   const handleOptimize = useCallback(async () => {
     setOptimizing(true);
     try {
@@ -150,6 +204,12 @@ export default function App() {
   // ── 3. Derived Variables (Must be before the return) ──────────────────
   const route = useMemo(() => routeData?.route ?? null, [routeData]);
   const activeStatus = useMemo(() => (activeBin ? statuses[activeBin] : null), [activeBin, statuses]);
+
+  // Current bin's sensor health
+  const activeSensorDiag = useMemo(() => {
+    if (!sensorHealth?.sensors || !activeBin) return null;
+    return sensorHealth.sensors.find(s => s.bin_id === activeBin) || null;
+  }, [sensorHealth, activeBin]);
 
   const handleCloseToast = useCallback(() => {
     setIsClosing(true);
@@ -220,9 +280,36 @@ export default function App() {
           </div>
         )}
 
+        {/* ── Sensor Failure Toast ── */}
+        {sensorToast && (
+          <div className={`fixed top-24 right-6 z-[1000] glass-panel border-orange-500/30 bg-orange-500/10 p-4 min-w-[340px] shadow-[0_0_20px_rgba(249,115,22,0.2)] ${sensorToastClosing ? 'animate-alert-pop-out' : 'animate-alert-pop-in'}`}>
+            <div className="flex gap-4">
+              <div className="relative">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-2xl">⚡</div>
+                <div className="absolute inset-0 rounded-2xl border-2 border-orange-500 animate-ping opacity-20"></div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <WifiOff size={14} className="text-orange-400" />
+                  <h3 className="text-xs font-black tracking-widest uppercase">Sensor Fault Injected</h3>
+                </div>
+                <p className="text-[11px] mt-1 font-bold opacity-70">{sensorToast.description}</p>
+                <p className="text-[10px] mt-0.5 opacity-50 font-mono">{sensorToast.injected}</p>
+                <button
+                  onClick={handleResetSensor}
+                  className="mt-3 w-full py-2 bg-orange-500/20 hover:bg-orange-500/40 border border-orange-500/40 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  Reset Sensor →
+                </button>
+              </div>
+              <button onClick={() => { setSensorToastClosing(true); setTimeout(() => setSensorToast(null), 400); }} className="self-start opacity-20 hover:opacity-100">✕</button>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-hidden grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
           <section className="xl:col-span-4 h-full overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-            <BinCard status={activeStatus} loading={loading} threshold={threshold} />
+            <BinCard status={activeStatus} loading={loading} threshold={threshold} sensorDiag={activeSensorDiag} />
             <ControlPanel
               onRefresh={() => fetchData()}
               onOptimize={handleOptimize}
@@ -241,6 +328,9 @@ export default function App() {
               statuses={statuses}
               trafficStrokeCount={trafficStrokes.length}
               onClearTraffic={() => setTrafficStrokes([])}
+              onSimulateSensorFailure={handleSimulateSensorFailure}
+              onResetSensor={handleResetSensor}
+              sensorHealth={sensorHealth}
             />
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
 
@@ -261,6 +351,7 @@ export default function App() {
                 threshold={threshold}
                 showPredictiveMap={showPredictiveMap}
                 predictiveData={predictiveData}
+                sensorHealth={sensorHealth}
                 trafficStrokes={trafficStrokes}
                 drawTrafficEnabled={drawTrafficEnabled}
                 onToggleDrawTraffic={() => setDrawTrafficEnabled((v) => !v)}

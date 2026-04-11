@@ -118,3 +118,39 @@ class BinPredictItem(BaseModel):
 
 class BinPredictResponse(BaseModel):
     predictions: List[BinPredictItem]
+
+
+# ─────────────────────────────────────────────
+#  Sensor Health / Failure Detection schemas
+# ─────────────────────────────────────────────
+
+class SensorHealthItem(BaseModel):
+    bin_id:                str
+    severity:              str       # "OK" | "WARNING" | "FAILURE"
+    issues:                List[str]
+    fill_pct:              Optional[float]
+    distance_cm:           Optional[float]
+    latitude:              Optional[float]
+    longitude:             Optional[float]
+    last_seen_seconds_ago: Optional[int]
+
+
+class SensorHealthResponse(BaseModel):
+    sensors: List[SensorHealthItem]
+    summary: dict  # {total, healthy, warnings, failures}
+
+
+class SensorSimulateRequest(BaseModel):
+    bin_id:   str   = Field(..., example="BIN_01")
+    scenario: str   = Field(
+        default="stale",
+        description='One of: stale, frozen, out_of_range, erratic, disconnect',
+        example="stale",
+    )
+
+
+class SensorSimulateResponse(BaseModel):
+    bin_id:      str
+    scenario:    str
+    description: str
+    injected:    str

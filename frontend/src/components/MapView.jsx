@@ -50,16 +50,19 @@ function buildLocations(statuses) {
 /* ── Custom Icons ── */
 // 🔥 ADD THIS NEW PIN ICON (replace makeIcon completely)
 
-const makePinIcon = (status, threshold) => {
+const makePinIcon = (status, threshold, sensorStatus) => {
   const pct = status.fill_pct ?? 0;
   const isCritical = status.is_alert || pct >= threshold;
   const isWarning = pct >= threshold - 30;
+  const isFailed = sensorStatus && sensorStatus !== "OK";
 
-  const color = isCritical
-    ? "var(--color-red)"
-    : isWarning
-      ? "#eab308"
-      : "var(--color-green)";
+  const color = isFailed
+    ? "#000000" // Black for failed sensor
+    : isCritical
+      ? "var(--color-red)"
+      : isWarning
+        ? "#eab308"
+        : "var(--color-green)";
 
   const label = status.bin_id === "DEPOT_00" ? "HUB" : status.bin_id;
 
@@ -68,7 +71,7 @@ const makePinIcon = (status, threshold) => {
     html: `
       <div style="display:flex;flex-direction:column;align-items:center;">
         
-        <!-- 🔴 HEAD -->
+        <!-- HEAD -->
         <div style="
           width:16px;
           height:16px;
@@ -79,20 +82,33 @@ const makePinIcon = (status, threshold) => {
           position:relative;
           z-index:2;
         ">
-          ${isCritical
+          ${isFailed
         ? `<div style="
                   position:absolute;
-                  inset:-6px;
-                  border-radius:50%;
-                  background:${color};
-                  opacity:0.3;
-                  animation:ping 1.5s infinite;
-                "></div>`
-        : ""
+                  inset:-8px;
+                  display:flex;
+                  align-items:center;
+                  justify-content:center;
+                  font-size:22px;
+                  font-weight:900;
+                  color:#ff0000;
+                  text-shadow:0 0 6px rgba(0,0,0,0.9);
+                  animation: pulse 1s infinite alternate;
+                ">✕</div>`
+        : isCritical
+          ? `<div style="
+                    position:absolute;
+                    inset:-6px;
+                    border-radius:50%;
+                    background:${color};
+                    opacity:0.3;
+                    animation:ping 1.5s infinite;
+                  "></div>`
+          : ""
       }
         </div>
 
-      <!-- 🔻 NEEDLE PIN -->
+      <!-- NEEDLE PIN -->
       <div style="
         width:2px;
         height:14px;
@@ -368,6 +384,7 @@ function MapLegend({ threshold, hasTraffic }) {
     { color: "#eab308", label: `Warning` },
     { color: "var(--color-red)", label: `Alert` },
     { color: "var(--color-purple)", label: "Route" },
+    { color: "#000000", label: "Sensor Failed" },
   ];
 
   return (
@@ -396,6 +413,7 @@ function MapCanvas({
   trafficStrokes,
   drawTrafficEnabled,
   onAddTrafficStroke,
+  sensorHealth,
 }) {
   const center = locations["DEPOT_00"] || [12.3106, 76.6450];
 
@@ -467,12 +485,15 @@ function MapCanvas({
           if (!s?.latitude || !s?.longitude) return null;
 
           const isDepot = s.bin_id === "DEPOT_00";
+          // Get sensor status for this bin
+          const sensorItem = sensorHealth?.sensors?.find(sh => sh.bin_id === s.bin_id);
+          const sensorStatus = sensorItem?.severity || "OK";
 
           return (
             <Marker
               key={s.bin_id}
               position={[s.latitude, s.longitude]}
-              icon={isDepot ? makeDepotIcon() : makePinIcon(s, threshold)}
+              icon={isDepot ? makeDepotIcon() : makePinIcon(s, threshold, sensorStatus)}
               eventHandlers={{
                 mouseover: (e) => e.target.openPopup(),
                 mouseout: (e) => e.target.closePopup(),
@@ -560,6 +581,7 @@ export default function MapView({
   threshold = 70,
   showPredictiveMap,
   predictiveData,
+  sensorHealth = null,
   trafficStrokes = [],
   drawTrafficEnabled = false,
   onToggleDrawTraffic = () => { },
@@ -697,6 +719,7 @@ export default function MapView({
             trafficStrokes={trafficStrokes}
             drawTrafficEnabled={drawTrafficEnabled}
             onAddTrafficStroke={handleStroke}
+            sensorHealth={sensorHealth}
           />
         </div>
       </div>
@@ -720,6 +743,7 @@ export default function MapView({
                 trafficStrokes={trafficStrokes}
                 drawTrafficEnabled={drawTrafficEnabled}
                 onAddTrafficStroke={handleStroke}
+                sensorHealth={sensorHealth}
               />
             </div>
           </div>

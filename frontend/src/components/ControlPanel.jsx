@@ -1,4 +1,5 @@
-import { RefreshCw, Route, Flame, AlertTriangle, ChevronDown, Zap, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { RefreshCw, Route, Flame, AlertTriangle, ChevronDown, Zap, Trash2, WifiOff, Activity, Radio } from "lucide-react";
 
 export default function ControlPanel({
   onRefresh, onOptimize, onSimulateAlert,
@@ -9,11 +10,28 @@ export default function ControlPanel({
   allBins, activeBin, setActiveBin, statuses,
   trafficStrokeCount = 0,
   onClearTraffic = () => {},
+  onSimulateSensorFailure = () => {},
+  onResetSensor = () => {},
+  sensorHealth = null,
 }) {
   const pct = threshold;
   const fillPos = ((pct - 30) / (90 - 30)) * 100;
   const fillColor = pct >= 70 ? "var(--color-red)" : pct >= 50 ? "var(--color-amber)" : "var(--color-green)";
   const glowShadow = `0 4px 12px ${fillColor}33`;
+
+  const [sensorMenuOpen, setSensorMenuOpen] = useState(false);
+
+  const scenarios = [
+    { key: "stale", label: "Stale Data", icon: "⏱️", desc: "No signal for 30 min" },
+    { key: "frozen", label: "Frozen Sensor", icon: "🧊", desc: "Stuck readings" },
+    { key: "out_of_range", label: "Out of Range", icon: "📡", desc: "Impossible values" },
+    { key: "erratic", label: "Erratic Spike", icon: "📈", desc: "+60% jump" },
+    { key: "disconnect", label: "Wire Fault", icon: "🔌", desc: "Negative distance" },
+  ];
+
+  // Sensor health summary counts
+  const healthSummary = sensorHealth?.summary;
+  const hasFailures = healthSummary && (healthSummary.failures > 0 || healthSummary.warnings > 0);
 
   return (
     <div className="glass-panel p-4 slide-in flex flex-col gap-4 border-[var(--color-card-border)] relative overflow-hidden">
@@ -36,9 +54,12 @@ export default function ControlPanel({
             {allBins.map((id) => {
               const s = statuses[id];
               const isAbnormal = s && (s.is_alert || s.fill_pct >= threshold);
+              // Check sensor health
+              const sensorItem = sensorHealth?.sensors?.find(sh => sh.bin_id === id);
+              const hasSensorIssue = sensorItem && sensorItem.severity !== "OK";
               return (
                 <option key={id} value={id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
-                  {id === "DEPOT_00" ? "Main HUB" : id} {s ? ` — ${s.fill_pct.toFixed(0)}%` : ""} {isAbnormal ? " ⚠ ALERT" : ""}
+                  {id === "DEPOT_00" ? "Main HUB" : id} {s ? ` — ${s.fill_pct.toFixed(0)}%` : ""} {isAbnormal ? " ⚠ ALERT" : ""}{hasSensorIssue ? " 🔧 SENSOR" : ""}
                 </option>
               );
             })}
@@ -104,7 +125,27 @@ export default function ControlPanel({
           {showPredictiveMap && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
         </button>
 
-      
+        {/* ── Sensor Failure Simulation ── */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => onSimulateSensorFailure("frozen")}
+            className="active:scale-[0.98] transition-all flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 group shadow-sm"
+            title="Inject frozen reading fault"
+          >
+            <span className="text-sm">🧊</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.1em]">Freeze Sensor</span>
+          </button>
+
+          <button
+            onClick={onResetSensor}
+            className="active:scale-[0.98] transition-all flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-[var(--color-green)] hover:border-[var(--color-green)]/30 hover:bg-[var(--color-green)]/5 group shadow-sm"
+            title="Restore sensor to healthy"
+          >
+            <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.1em]">Reset Grid</span>
+          </button>
+        </div>
+
       </div>
 
       {/* ── Threshold Slider Tile ── */}

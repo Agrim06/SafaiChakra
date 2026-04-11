@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Trash2, Zap } from "lucide-react";
+import { AlertTriangle, CheckCircle, Trash2, Zap, WifiOff, Activity } from "lucide-react";
 
 function FillGauge({ pct, threshold }) {
   const isCritical = pct >= threshold;
@@ -22,7 +22,7 @@ function FillGauge({ pct, threshold }) {
           <div 
             className="absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out" 
             style={{ 
-              height: `${pct}%`, 
+              height: `${Math.max(0, Math.min(100, pct))}%`, 
               backgroundColor: color,
               boxShadow: `0 0 15px ${color}88 inset, 0 0 20px ${color}44`,
               backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.1), rgba(255,255,255,0.2))`
@@ -54,7 +54,7 @@ function FillGauge({ pct, threshold }) {
   );
 }
 
-export default function BinCard({ status, loading, threshold = 70 }) {
+export default function BinCard({ status, loading, threshold = 70, sensorDiag = null }) {
   if (loading || !status) {
     return (
       <div className="glass-panel p-6 flex items-center justify-center animate-pulse border-[var(--color-card-border)] bg-[var(--color-surface)]">
@@ -72,8 +72,15 @@ export default function BinCard({ status, loading, threshold = 70 }) {
   const label = isCritical ? "CRITICAL" : isWarning ? "WARNING" : "OPERATIONAL";
   const accentColor = isCritical ? "var(--color-red)" : isWarning ? "var(--color-amber)" : "var(--color-green)";
 
+  // Sensor health
+  const sensorFailed = sensorDiag && sensorDiag.severity === "FAILURE";
+  const sensorWarn   = sensorDiag && sensorDiag.severity === "WARNING";
+  const sensorOk     = sensorDiag && sensorDiag.severity === "OK";
+  const sensorColor = sensorFailed ? "var(--color-red)" : sensorWarn ? "var(--color-amber)" : "var(--color-green)";
+  const sensorLabel = sensorFailed ? "FAULT" : sensorWarn ? "WARN" : "OK";
+
   return (
-    <div className={`glass-panel p-3.5 relative overflow-hidden transition-all duration-500 border-[var(--color-card-border)] ${isCritical ? 'ring-2 ring-red-500/20' : ''}`}>
+    <div className={`glass-panel p-3.5 relative overflow-hidden transition-all duration-500 border-[var(--color-card-border)] ${isCritical ? 'ring-2 ring-red-500/20' : ''} ${sensorFailed ? 'ring-2 ring-orange-500/30' : ''}`}>
       
       {/* Structural Corner Icon */}
       <div className="absolute -top-4 -right-4 opacity-[0.03] text-[var(--color-text)]">
@@ -120,7 +127,7 @@ export default function BinCard({ status, loading, threshold = 70 }) {
               <div 
                 className="h-full transition-all duration-1000 ease-out"
                 style={{ 
-                  width: `${fill_pct}%`,
+                  width: `${Math.max(0, Math.min(100, fill_pct))}%`,
                   backgroundColor: accentColor,
                   boxShadow: `2px 0 8px ${accentColor}44`
                 }} 
@@ -132,8 +139,8 @@ export default function BinCard({ status, loading, threshold = 70 }) {
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: "State", val: is_alert ? "ALERT" : "STABLE", color: is_alert ? "var(--color-red)" : "var(--color-green)" },
-              { label: "Free", val: `${(100 - fill_pct).toFixed(0)}%`, color: "var(--color-cyan)" },
-              { label: "Ping", val: created_at ? "0.4s" : "--", color: "var(--color-purple)" },
+              { label: "Free", val: `${Math.max(0, (100 - fill_pct)).toFixed(0)}%`, color: "var(--color-cyan)" },
+              { label: "Sensor", val: sensorLabel, color: sensorColor },
             ].map(({ label, val, color }) => (
               <div key={label} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-xl p-1.5 text-center shadow-sm">
                 <p className="text-[9.5px] text-[var(--color-text-dim)] uppercase tracking-tight font-black mb-0.5">{label}</p>
@@ -144,6 +151,40 @@ export default function BinCard({ status, loading, threshold = 70 }) {
 
         </div>
       </div>
+
+      {/* ── Sensor Health Diagnostic Banner ── */}
+      {sensorDiag && sensorDiag.severity !== "OK" && (
+        <div className={`mt-3 px-3 py-2 rounded-xl border transition-all sensor-diag-enter ${
+          sensorFailed 
+            ? "bg-orange-500/8 border-orange-500/25" 
+            : "bg-[var(--color-amber)]/8 border-[var(--color-amber)]/25"
+        }`}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <WifiOff size={12} className={sensorFailed ? "text-orange-400" : "text-[var(--color-amber)]"} />
+            <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${
+              sensorFailed ? "text-orange-400" : "text-[var(--color-amber)]"
+            }`}>
+              Sensor {sensorDiag.severity}
+            </span>
+            {sensorDiag.last_seen_seconds_ago != null && (
+              <span className="ml-auto text-[9px] font-bold text-[var(--color-text-muted)]">
+                {sensorDiag.last_seen_seconds_ago < 60 
+                  ? `${sensorDiag.last_seen_seconds_ago}s ago`
+                  : `${Math.floor(sensorDiag.last_seen_seconds_ago / 60)}m ago`
+                }
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {sensorDiag.issues.map((issue, i) => (
+              <p key={i} className="text-[9px] font-medium text-[var(--color-text-muted)] leading-tight">
+                • {issue}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
