@@ -15,7 +15,6 @@ import models
 from routers.bin_router    import router as bin_router
 from routers.route_router  import router as route_router
 from routers.sensor_router import router as sensor_router
-from routers.report_router import router as report_router
 from routers.feedback      import router as feedback_router
 
 # ── App factory ─────────────────────────────────────────────────────────────
@@ -50,7 +49,6 @@ models.Base.metadata.create_all(bind=engine)
 app.include_router(bin_router)
 app.include_router(route_router)
 app.include_router(sensor_router)
-app.include_router(report_router)
 app.include_router(feedback_router)
 
 # ── Health / root ─────────────────────────────────────────────────────────────

@@ -1,12 +1,24 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
+from sqlalchemy.orm import Session
+from database import get_db
+from services import sensor_service
 
 router = APIRouter(tags=["feedback"])
 
 
 @router.get("/feedback", response_class=HTMLResponse)
-def feedback(bin_id: str):
+def feedback(bin_id: str, db: Session = Depends(get_db)):
     print(f"Feedback received for bin {bin_id}")
+    
+    # Try finding the actual bin in the DB to avoid case mismatch errors
+    existing_bins = sensor_service.diagnose_all(db)
+    actual_id = next((b["bin_id"] for b in existing_bins if b["bin_id"].upper() == bin_id.upper()), bin_id)
+    
+    # Trigger simulation for the provided bin
+    sensor_service.simulate_failure(db, actual_id, scenario="disconnect")
+    print(f"Injected sensor failure for {actual_id}")
+
     return f"""
 <!DOCTYPE html>
 <html>

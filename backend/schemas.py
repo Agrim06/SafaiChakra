@@ -16,6 +16,7 @@ class BinUpdateRequest(BaseModel):
     distance_cm: Optional[float] = Field(None, example=10.0)
     latitude:    Optional[float] = Field(None, example=12.97)
     longitude:   Optional[float] = Field(None, example=77.59)
+    sensor_status: Optional[bool] = Field(None, example=False)
 
 
 class BinUpdateResponse(BaseModel):
@@ -33,6 +34,7 @@ class BinStatusResponse(BaseModel):
     latitude:   Optional[float]
     longitude:  Optional[float]
     is_alert:   bool
+    sensor_status: bool
     message:    str
     created_at: datetime
     spillover_risk: Optional[int] = None
@@ -45,6 +47,7 @@ class BinHistoryItem(BaseModel):
     fill_pct:   float
     distance_cm: Optional[float]
     is_alert:   bool
+    sensor_status: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -133,6 +136,7 @@ class SensorHealthItem(BaseModel):
     latitude:              Optional[float]
     longitude:             Optional[float]
     last_seen_seconds_ago: Optional[int]
+    sensor_status: bool = False
 
 
 class SensorHealthResponse(BaseModel):
@@ -156,20 +160,4 @@ class SensorSimulateResponse(BaseModel):
     injected:    str
 
 
-# ─────────────────────────────────────────────
-#  Citizen Report schemas
-# ─────────────────────────────────────────────
 
-class BinReportRequest(BaseModel):
-    location_name: str
-    latitude:      float
-    longitude:     float
-    image_data:    Optional[str] = None # Base64
-
-class BinReportResponse(BaseModel):
-    id:            int
-    location_name: str
-    status:        str
-    created_at:    datetime
-
-    model_config = {"from_attributes": True}

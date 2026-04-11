@@ -100,13 +100,14 @@ def _diagnose_single_bin(
 
     return {
         "bin_id": latest.bin_id,
-        "severity": severity,
-        "issues": issues,
+        "severity": FAILURE if latest.sensor_status else severity,
+        "issues": ["Manual sensor failure injected"] if latest.sensor_status else issues,
         "fill_pct": latest.fill_pct,
         "distance_cm": latest.distance_cm,
         "latitude": latest.latitude,
         "longitude": latest.longitude,
         "last_seen_seconds_ago": int(reading_age),
+        "sensor_status": latest.sensor_status,
     }
 
 
@@ -154,25 +155,19 @@ def diagnose_single(db: Session, bin_id: str) -> Optional[Dict[str, Any]]:
 # ── Simulation helpers ──────────────────────────────────────────────────────
 
 FAILURE_SCENARIOS = {
-    "stale":      "Simulate stale sensor (timestamp pushed far into the past)",
-    "frozen":     "Inject N identical readings at fill 54.0%",
-    "out_of_range": "Set fill to -12% (impossible value)",
-    "erratic":    "Spike fill from current to +60%",
-    "disconnect": "Set distance_cm to -1 (sensor wiring fault)",
+    "disconnect": "Simulate hardware disconnect by flagging the sensor_status column",
+    "stale":      "Legacy scenario: Pushes timestamp back (still supported)",
 }
 
 
 def simulate_failure(
     db: Session,
     bin_id: str,
-    scenario: str = "stale",
+    scenario: str = "disconnect",
 ) -> Dict[str, Any]:
     """
-    Inject a synthetic fault into the database for demo purposes.
-    Returns a summary of what was injected.
+    Toggle the sensor_status column to True instead of appending new readings.
     """
-    from sqlalchemy.sql import func as sqlfunc
-
     latest = get_latest_reading(db, bin_id)
     if latest is None:
         return {"error": f"Bin '{bin_id}' not found"}
@@ -180,85 +175,26 @@ def simulate_failure(
     summary: Dict[str, Any] = {
         "bin_id": bin_id,
         "scenario": scenario,
-        "description": FAILURE_SCENARIOS.get(scenario, "unknown"),
+        "description": FAILURE_SCENARIOS.get(scenario, "Hardware failure injection"),
     }
 
+    # Instead of appending, we just update the latest reading's status flag
+    latest.sensor_status = True
+    
     if scenario == "stale":
-        # Push the timestamp 30 minutes into the past
         latest.created_at = datetime.now(timezone.utc) - timedelta(minutes=30)
-        db.commit()
-        summary["injected"] = "Moved last reading timestamp 30 min back"
-
-    elif scenario == "frozen":
-        # Write 6 identical readings at exactly 54.0%
-        frozen_fill = 54.0
-        for _ in range(6):
-            reading = models.BinReading(
-                bin_id=bin_id,
-                fill_pct=frozen_fill,
-                distance_cm=latest.distance_cm,
-                latitude=latest.latitude,
-                longitude=latest.longitude,
-                is_alert=False,
-            )
-            db.add(reading)
-        db.commit()
-        summary["injected"] = f"6 identical readings at {frozen_fill}%"
-
-    elif scenario == "out_of_range":
-        # Insert a new row with impossible values (keeps old reading as history)
-        bad = models.BinReading(
-            bin_id=bin_id,
-            fill_pct=-12.0,
-            distance_cm=999.0,
-            latitude=latest.latitude,
-            longitude=latest.longitude,
-            is_alert=False,
-        )
-        db.add(bad)
-        db.commit()
-        summary["injected"] = "fill_pct=-12, distance_cm=999"
-
-    elif scenario == "erratic":
-        # Insert a new row that spikes +60% from current — history still has old reading
-        prev_fill = latest.fill_pct
-        spike = min(prev_fill + 60, 160)
-        spiked = models.BinReading(
-            bin_id=bin_id,
-            fill_pct=spike,
-            distance_cm=latest.distance_cm,
-            latitude=latest.latitude,
-            longitude=latest.longitude,
-            is_alert=spike >= 70,
-        )
-        db.add(spiked)
-        db.commit()
-        summary["injected"] = f"fill_pct spiked {prev_fill:.0f}% → {spike:.1f}%"
-
-    elif scenario == "disconnect":
-        # Insert a new row with negative distance (wiring fault)
-        bad = models.BinReading(
-            bin_id=bin_id,
-            fill_pct=0.0,
-            distance_cm=-1.0,
-            latitude=latest.latitude,
-            longitude=latest.longitude,
-            is_alert=False,
-        )
-        db.add(bad)
-        db.commit()
-        summary["injected"] = "distance_cm=-1 (sensor wiring fault)"
-
+        summary["injected"] = "Flagged as failed + moved timestamp back"
     else:
-        summary["injected"] = "Unknown scenario, nothing changed"
+        summary["injected"] = "sensor_status set to True"
 
+    db.commit()
     db.refresh(latest)
     return summary
 
 
 def reset_sensor(db: Session, bin_id: str) -> Dict[str, Any]:
     """
-    Reset a simulated failure: put the bin back to a healthy 25% fill.
+    Reset a simulated failure: toggle sensor_status back to False.
     """
     from sqlalchemy.sql import func as sqlfunc
 
@@ -266,18 +202,16 @@ def reset_sensor(db: Session, bin_id: str) -> Dict[str, Any]:
     if latest is None:
         return {"error": f"Bin '{bin_id}' not found"}
 
-    latest.fill_pct = 25.0
-    latest.distance_cm = 30.0
-    latest.is_alert = False
+    latest.sensor_status = False
     latest.created_at = sqlfunc.now()
     db.commit()
     db.refresh(latest)
 
-    return {"bin_id": bin_id, "status": "reset", "fill_pct": 25.0}
+    return {"bin_id": bin_id, "status": "reset", "sensor_status": False}
 
 
 def reset_all_sensors(db: Session) -> Dict[str, Any]:
-    """Reset all known bins to healthy defaults."""
+    """Reset all known bins to healthy state."""
     from services.bin_service import get_all_bins
     from sqlalchemy.sql import func as sqlfunc
 
@@ -286,9 +220,7 @@ def reset_all_sensors(db: Session) -> Dict[str, Any]:
     for bid in bin_ids:
         latest = get_latest_reading(db, bid)
         if latest:
-            latest.fill_pct = 25.0
-            latest.distance_cm = 30.0
-            latest.is_alert = False
+            latest.sensor_status = False
             latest.created_at = sqlfunc.now()
             count += 1
     

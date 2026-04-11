@@ -29,6 +29,9 @@ def create_reading(db: Session, payload: BinUpdateRequest) -> models.BinReading:
     
     lat = payload.latitude if payload.latitude is not None else (latest.latitude if latest else None)
     lon = payload.longitude if payload.longitude is not None else (latest.longitude if latest else None)
+    
+    # Check if failed status is specified or carry over previous
+    sensor_status = payload.sensor_status if payload.sensor_status is not None else (latest.sensor_status if latest else False)
 
     if latest:
         latest.fill_pct = payload.fill_pct
@@ -36,6 +39,7 @@ def create_reading(db: Session, payload: BinUpdateRequest) -> models.BinReading:
         latest.latitude = lat
         latest.longitude = lon
         latest.is_alert = is_alert
+        latest.sensor_status = sensor_status
         from sqlalchemy.sql import func
         latest.created_at = func.now()
         db.commit()
@@ -49,6 +53,7 @@ def create_reading(db: Session, payload: BinUpdateRequest) -> models.BinReading:
         latitude    = lat,
         longitude   = lon,
         is_alert    = is_alert,
+        sensor_status = sensor_status,
     )
     db.add(reading)
     db.commit()

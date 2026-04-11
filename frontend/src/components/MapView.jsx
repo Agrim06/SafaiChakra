@@ -55,33 +55,42 @@ const makePinIcon = (status, threshold, sensorStatus) => {
   const isCritical = status.is_alert || pct >= threshold;
   const isWarning = pct >= threshold - 30;
   const isFailed = sensorStatus && sensorStatus !== "OK";
+  const isBin01 = status.bin_id === "BIN_01";
 
   const color = isFailed
     ? "#000000" // Black for failed sensor
-    : isCritical
-      ? "var(--color-red)"
-      : isWarning
-        ? "#eab308"
-        : "var(--color-green)";
-
-  const label = status.bin_id === "DEPOT_00" ? "HUB" : status.bin_id;
+    : isBin01
+      ? "#ff4500" // Orangered for fire bin
+      : isCritical
+        ? "var(--color-red)"
+        : isWarning
+          ? "#eab308"
+          : "var(--color-green)";
 
   return L.divIcon({
     className: "",
     html: `
-      <div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
         
         <!-- HEAD -->
         <div style="
-          width:16px;
-          height:16px;
+          width:${isBin01 ? '26px' : '16px'};
+          height:${isBin01 ? '26px' : '16px'};
           border-radius:50%;
           background:${color};
-          box-shadow:0 0 10px ${color}AA;
+          box-shadow:0 0 20px ${color}AA;
           border:2px solid white;
           position:relative;
           z-index:2;
+          display:flex;
+          align-items:center;
+          justify-content:center;
         ">
+          ${isBin01 ? `
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3 0-1.22.5-2 1-2 1.25 0 2.5 1.5 2.5 2.5 0 .25 0 .5-.07.75.53-.25 1.07-.33 1.57-.33 1.1 0 2.5 1.5 2.5 2.5 0 2.5-2.5 5-5 5-3.14 0-5-2-5-5 0-1.5 1-3.5 2.5-5.5 0 2 1 3 1.5 4.5z"></path>
+            </svg>
+          ` : ''}
           ${isFailed
         ? `<div style="
                   position:absolute;
@@ -95,7 +104,7 @@ const makePinIcon = (status, threshold, sensorStatus) => {
                   text-shadow:0 0 6px rgba(0,0,0,0.9);
                   animation: pulse 1s infinite alternate;
                 ">✕</div>`
-        : isCritical
+        : !isBin01 && isCritical
           ? `<div style="
                     position:absolute;
                     inset:-6px;

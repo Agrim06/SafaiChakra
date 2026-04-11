@@ -50,6 +50,7 @@ def get_bin_status(bin_id: str, db: Session = Depends(get_db)):
         latitude    = reading.latitude,
         longitude   = reading.longitude,
         is_alert    = reading.is_alert,
+        sensor_status = reading.sensor_status,
         message     = "Collection needed!" if reading.is_alert else "All good.",
         created_at  = reading.created_at,
         spillover_risk = bin_service.calculate_predictive_risk(db, reading.bin_id, reading.fill_pct),
@@ -70,6 +71,7 @@ def get_bin_history(
             fill_pct    = r.fill_pct,
             distance_cm = r.distance_cm,
             is_alert    = r.is_alert,
+            sensor_status = r.sensor_status,
             created_at  = r.created_at,
         )
         for r in readings
