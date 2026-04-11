@@ -647,8 +647,8 @@ export default function MapView({
           type="button"
           onClick={onToggleDrawTraffic}
           className={`p-1.5 rounded-md transition-all border border-transparent group flex items-center gap-2 pr-3 ${drawTrafficEnabled
-              ? "bg-red-500/10 text-red-400 hover:bg-red-500/15"
-              : "hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--color-text)]"
+            ? "bg-red-500/10 text-red-400 hover:bg-red-500/15"
+            : "hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--color-text)]"
             }`}
           title={drawTrafficEnabled ? "Stop drawing traffic" : "Draw traffic on map"}
         >
