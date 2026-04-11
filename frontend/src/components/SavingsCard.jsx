@@ -99,18 +99,35 @@ export default function SavingsCard({ routeData }) {
           <p className="text-[15px] font-black text-[var(--color-text)] tracking-tight">Efficiency Savings</p>
         </div>
 
-        <div className="flex-1 flex items-center gap-3 bg-[var(--color-bg)] p-2 rounded-lg border border-[var(--color-card-border)]">
-          <div className="px-3 py-1 flex items-baseline gap-2">
-             <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-widest">Base</span>
-             <span className="text-[13px] font-black tabular-nums text-[var(--color-text-muted)]">{s.eff_unopt}km</span>
+        <div className="flex-1 grid grid-cols-[1fr_auto_1fr_auto] items-center gap-0 bg-[var(--color-bg)] rounded-xl border border-[var(--color-card-border)] overflow-hidden">
+          {/* Base Configuration */}
+          <div className="flex flex-col px-4 py-2 border-r border-[var(--color-card-border)] bg-[var(--color-bg)]/30">
+            <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-0.5">Traditional Routing</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Base</span>
+              <span className="text-[17px] font-black tabular-nums text-[var(--color-text-muted)] leading-none">{s.eff_unopt}</span>
+              <span className="text-[10px] font-bold text-[var(--color-text-muted)] lowercase">KM</span>
+            </div>
           </div>
-          <ArrowRight size={14} className="text-[var(--color-card-border)]" />
-          <div className="px-3 py-1 flex items-baseline gap-2 bg-[var(--color-green)]/5 rounded-md">
-             <span className="text-[10px] font-black text-[var(--color-text-green)] uppercase tracking-widest">Opt</span>
-             <span className="text-[13px] font-black tabular-nums text-[var(--color-text)]">{s.eff_opt}km</span>
+
+          <div className="px-3 flex items-center justify-center">
+            <ArrowRight size={14} className="text-[var(--color-text-dim)]/40" />
           </div>
-          <div className="ml-auto px-5 py-2 bg-[var(--color-surface)] border border-[var(--color-card-border)] rounded-md">
-             <span className="text-[13px] font-black text-[var(--color-green)] tracking-tight">₹{s.costSaved} Saved</span>
+
+          {/* Optimized Configuration */}
+          <div className="flex flex-col px-4 py-2 border-l border-[var(--color-card-border)] bg-[var(--color-green)]/[0.03]">
+            <span className="text-[9px] font-black text-[var(--color-green)] uppercase tracking-[0.2em] mb-0.5">OR-Tools Intelligence</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] font-bold text-[var(--color-text-green)] uppercase">Opt</span>
+              <span className="text-[17px] font-black tabular-nums text-[var(--color-text)] leading-none">{s.eff_opt}</span>
+              <span className="text-[10px] font-bold text-[var(--color-text-dim)] lowercase">km</span>
+            </div>
+          </div>
+
+          {/* Financial Dividend */}
+          <div className="bg-[var(--color-surface)] border-l border-[var(--color-card-border)] px-5 py-2.5 flex flex-col justify-center items-end">
+            <span className="text-[9px] font-black text-[var(--color-green)] uppercase tracking-[0.2em] mb-0.5">Dividend</span>
+            <span className="text-[17px] font-black text-[var(--color-green)] tracking-tighter leading-none shadow-[0_0_15px_rgba(14,126,42,0.1)]">₹{s.costSaved} Saved</span>
           </div>
         </div>
       </div>
@@ -136,8 +153,8 @@ export default function SavingsCard({ routeData }) {
           />
         </div>
         <div className="hidden sm:flex items-center gap-2.5 text-[9px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter">
-           <div className="w-2 h-2 rounded-full bg-[var(--color-green)] animate-pulse" />
-           {s.hasRealDistances ? "GPS Active" : "Synthetic"}
+           {/* <div className="w-2 h-2 rounded-full bg-[var(--color-green)] animate-pulse" />
+           {s.hasRealDistances ? "GPS Active" : "Synthetic"} */}
         </div>
       </div>
     </div>

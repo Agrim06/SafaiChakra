@@ -38,7 +38,7 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
         </div>
       </div>
 
-      <div className="relative flex items-center justify-between w-full px-4">
+      <div className="relative flex items-center justify-between w-full px-4 mb-10 mt-1">
         {/* Background Track */}
         <div className="absolute top-1/2 left-4 right-4 h-[2px] bg-[var(--color-card-border)] -translate-y-1/2 z-0 opacity-50"></div>
         
@@ -95,17 +95,17 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
               {stops.length} Nodes
             </span>
           </div>
-          <div className="flex flex-wrap gap-1.5 items-center">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar no-scrollbar scroll-smooth">
             {route.map((bin, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <span className={`px-2 py-1 rounded-lg text-[9.5px] font-black uppercase border transition-all shadow-sm ${
+              <div key={i} className="flex items-center gap-2 shrink-0">
+                <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border transition-all shadow-sm ${
                   bin === "DEPOT_00" 
-                  ? 'bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/30 text-[var(--color-cyan)]' 
+                  ? 'bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/30 text-[var(--color-cyan)] shadow-[0_0_10px_rgba(0,219,233,0.1)]' 
                   : 'bg-[var(--color-surface)] border-[var(--color-card-border)] text-[var(--color-text)]'
                 }`}>
                   {bin === "DEPOT_00" ? "HUB" : bin.replace("BIN_", "")}
-                </span>
-                {i < route.length - 1 && <ArrowRight size={10} className="text-[var(--color-text-dim)] opacity-40" />}
+                </div>
+                {i < route.length - 1 && <ArrowRight size={10} className="text-[var(--color-text-dim)] opacity-40 shrink-0" />}
               </div>
             ))}
           </div>

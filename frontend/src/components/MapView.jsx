@@ -258,11 +258,11 @@ function MapController({ route, locations, recenterTrigger }) {
       map.invalidateSize();
       const coords = route?.map((id) => locations[id]).filter(Boolean) || [];
       if (coords.length > 1) {
-        map.fitBounds(coords, { padding: [70, 70], animate: true });
+        map.fitBounds(coords, { padding: [10, 10], animate: true });
       } else {
         const allCoords = Object.values(locations);
         if (allCoords.length > 0) {
-          map.fitBounds(allCoords, { padding: [100, 100], animate: true });
+          map.fitBounds(allCoords, { padding: [20, 20], animate: true });
         }
       }
     };
@@ -311,24 +311,20 @@ function AnimatedTruck({ routeCoords }) {
 function MapLegend({ threshold, hasTraffic }) {
   const items = [
     { color: "var(--color-cyan)", label: "Depot" },
-    { color: "var(--color-green)", label: `Normal (<${threshold - 30}%)` },
-    { color: "var(--color-amber)", label: `Warning (<${threshold}%)` },
-    { color: "var(--color-red)", label: `Critical (>${threshold}%)` },
-    { color: "#2563eb", label: "Optimized route" },
-    ...(hasTraffic ? [{ color: "#ef4444", label: "Traffic (drawn)" }] : []),
+    { color: "var(--color-green)", label: `Normal` },
+    { color: "var(--color-amber)", label: `Warning` },
+    { color: "var(--color-red)", label: `Alert` },
+    { color: "var(--color-purple)", label: "Route" },
   ];
 
   return (
-    <div className="absolute bottom-6 left-6 z-[1000] glass-panel bg-[var(--color-surface)] p-4 border-[var(--color-card-border)] shadow-2xl pointer-events-none backdrop-blur-md">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Tactical Legend</p>
-      <div className="space-y-2.5">
-        {items.map((i) => (
-          <div key={i.label} className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full" style={{ background: i.color, boxShadow: `0 0 8px ${i.color}` }} />
-            <span className="text-[10px] font-bold text-[var(--color-text)] uppercase">{i.label}</span>
-          </div>
-        ))}
-      </div>
+    <div className="absolute top-4 left-4 z-[1000] glass-panel bg-[var(--color-surface)]/80 px-3 py-1.5 border-[var(--color-card-border)] shadow-xl pointer-events-none backdrop-blur-md flex items-center gap-4">
+      {items.map((i) => (
+        <div key={i.label} className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: i.color, boxShadow: `0 0 5px ${i.color}` }} />
+          <span className="text-[9px] font-black text-[var(--color-text)] uppercase tracking-tighter opacity-80">{i.label}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -356,10 +352,10 @@ function MapCanvas({
     : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 
   return (
-    <div className="relative w-full h-full min-h-[400px]">
+    <div className="relative w-full h-full min-h-0">
       <MapContainer
         center={center}
-        zoom={14}
+        zoom={16}
         className="w-full h-full"
         zoomControl={false}
         attributionControl={false}
@@ -517,7 +513,7 @@ export default function MapView({
   const displayPath = roadPath || (route?.map(id => locations[id]).filter(Boolean) || []);
 
   const Header = ({ isModal }) => (
-    <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-surface)] border-b border-[var(--color-card-border)] backdrop-blur-xl">
+    <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-surface)] border-b border-[var(--color-card-border)] backdrop-blur-xl shrink-0">
       <div className="flex items-center gap-3">
         <div className="relative flex items-center justify-center">
           <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div>
