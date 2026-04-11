@@ -33,8 +33,6 @@ export default function App() {
 
   const [trafficStrokes, setTrafficStrokes] = useState([]);
   const [drawTrafficEnabled, setDrawTrafficEnabled] = useState(false);
-  const [trafficStrictAvoid, setTrafficStrictAvoid] = useState(false);
-
   // 1. Fetch all known bins
   const fetchAllBins = useCallback(async () => {
     try {
@@ -111,7 +109,7 @@ export default function App() {
       const { data } = await axios.post(`${API_BASE}/optimize-route`, {
         threshold,
         trafficZones,
-        trafficMode: trafficStrictAvoid ? "avoid" : "penalize",
+        trafficMode: "penalize",
         useSpilloverPrediction,
       });
       setRouteData(data);
@@ -121,7 +119,7 @@ export default function App() {
     } finally {
       setOptimizing(false);
     }
-  }, [threshold, trafficStrokes, trafficStrictAvoid, showPredictiveMap, predictiveData]);
+  }, [threshold, trafficStrokes, showPredictiveMap, predictiveData]);
 
   const handleSimulateAlert = async () => {
     if (!activeBin) return;
@@ -235,8 +233,6 @@ export default function App() {
               statuses={statuses}
               trafficStrokeCount={trafficStrokes.length}
               onClearTraffic={() => setTrafficStrokes([])}
-              trafficStrictAvoid={trafficStrictAvoid}
-              onTrafficStrictAvoidChange={setTrafficStrictAvoid}
             />
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
 

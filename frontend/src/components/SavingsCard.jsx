@@ -16,15 +16,13 @@ function calcSavings(routeData) {
 
   const optimized_km = routeData.optimized_distance_km ?? 0;
   const baseline_km = routeData.baseline_distance_km;
-  const allBinsTour_km = routeData.unoptimized_distance_km ?? 0;
+  const haversineRefKm = routeData.unoptimized_distance_km ?? 0;
 
   const hasFairBaseline = typeof baseline_km === "number" && baseline_km > 0;
-  const comparisonBaseKm = hasFairBaseline
-    ? baseline_km
-    : Math.max(allBinsTour_km || 0, optimized_km, 1e-6);
+  const comparisonBaseKm = hasFairBaseline ? baseline_km : Math.max(optimized_km, 1e-6);
   const saved_km = Math.max(0, comparisonBaseKm - optimized_km);
 
-  const eff_unopt = hasFairBaseline ? baseline_km : comparisonBaseKm;
+  const eff_unopt = comparisonBaseKm;
   const eff_opt = optimized_km;
   const eff_saved = saved_km;
 
@@ -52,7 +50,7 @@ function calcSavings(routeData) {
     driveMinSaved: Math.round(driveMinSaved),
     pct: pct.toFixed(1),
     hasFairBaseline,
-    allBinsTour_km: allBinsTour_km.toFixed(1),
+    haversineRefKm: haversineRefKm.toFixed(1),
   };
 }
 
@@ -120,7 +118,7 @@ export default function SavingsCard({ routeData }) {
           {/* Base Configuration */}
           <div className="flex flex-col px-4 py-2 border-r border-[var(--color-card-border)] bg-[var(--color-bg)]/30">
             <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-0.5">
-              {s.hasFairBaseline ? "Fixed order (drive)" : "Comparison base"}
+              {s.hasFairBaseline ? "Static route (all bins)" : "Comparison base"}
             </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Base</span>
@@ -178,8 +176,8 @@ export default function SavingsCard({ routeData }) {
             <span>km</span>
           </div>
         </div>
-        <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide leading-relaxed border-t sm:border-t-0 sm:border-l border-[var(--color-card-border)] pt-2 sm:pt-0 sm:pl-4 sm:max-w-[240px]">
-          Full-city straight-line tour ≈ {s.allBinsTour_km} km (reference only). Savings use same-stop driving baseline when available.
+        <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide leading-relaxed border-t sm:border-t-0 sm:border-l border-[var(--color-card-border)] pt-2 sm:pt-0 sm:pl-4 sm:max-w-[260px]">
+          Base = fixed driving loop to every bin (sorted id). Savings vs that schedule for this optimized subset. Straight-line ref ≈ {s.haversineRefKm} km.
         </p>
       </div>
     </div>

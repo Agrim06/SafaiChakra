@@ -60,8 +60,8 @@ class RouteResponse(BaseModel):
     total_city_bins:          int    # total bins in the city (with GPS)
     distances:                List[float]  # per-leg distances (km) for the optimised route
     optimized_distance_km:    float        # TSP-optimal distance (critical bins only)
-    unoptimized_distance_km:  float        # straight-line tour visiting ALL city bins (Haversine)
-    baseline_distance_km:     float = 0.0  # driving tour, same priority stops, fixed insertion order
+    unoptimized_distance_km:  float        # straight-line tour all bins (Haversine), secondary reference
+    baseline_distance_km:     float = 0.0  # OSRM driving: fixed static route depot → every bin → depot (sorted bin_id)
 
 
 class TrafficZoneItem(BaseModel):

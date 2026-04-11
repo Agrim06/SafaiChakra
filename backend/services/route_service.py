@@ -10,6 +10,7 @@ Business logic for route planning:
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -82,6 +83,34 @@ def get_all_bins_with_coords(db: Session) -> List[models.BinReading]:
     return [r for r in all_latest if r.latitude is not None and r.longitude is not None]
 
 
+def _natural_bin_id_key(bin_id: str) -> Tuple[Any, ...]:
+    parts = re.split(r"(\d+)", bin_id)
+    key: List[Any] = []
+    for p in parts:
+        if not p:
+            continue
+        if p.isdigit():
+            key.append(int(p))
+        else:
+            key.append(p.lower())
+    return tuple(key)
+
+
+def static_full_city_driving_km(
+    depot_lat: float,
+    depot_lon: float,
+    all_bins: List[models.BinReading],
+) -> float:
+    """Fixed municipal schedule: depot → every non-depot bin (stable bin_id order) → depot, road distances."""
+    if not all_bins:
+        return 0.0
+    ordered = sorted(all_bins, key=lambda b: _natural_bin_id_key(b.bin_id))
+    coords: List[Tuple[float, float]] = [(depot_lat, depot_lon)]
+    coords.extend((b.latitude, b.longitude) for b in ordered)
+    matrix = _build_distance_matrix(coords)
+    return naive_loop_driving_km(matrix)
+
+
 def compute_route(
     db: Session,
     threshold: float = ALERT_THRESHOLD,
@@ -93,8 +122,8 @@ def compute_route(
     High-level entry point: fetch priority bins → optimise → return RouteResponse.
 
     Savings comparison:
-      - Unoptimized baseline: visit ALL city bins sequentially (naive approach)
-      - Optimized result:     visit only critical (above threshold) bins via TSP
+      - baseline_distance_km: fixed static driving tour visiting ALL bins (sorted id)
+      - optimized: TSP on priority bins only
     """
     from route_optimizer import _haversine_km
 
@@ -127,6 +156,8 @@ def compute_route(
             )
     unoptimized_km = round(unoptimized_km, 3)
 
+    static_baseline_km = static_full_city_driving_km(depot_lat, depot_lon, all_bins)
+
     # Critical bins only (above threshold with GPS)
     priority_bins_raw = get_priority_bins(
         db, threshold, use_spillover_prediction=use_spillover_prediction
@@ -141,7 +172,7 @@ def compute_route(
             distances=[],
             optimized_distance_km=0.0,
             unoptimized_distance_km=unoptimized_km,
-            baseline_distance_km=0.0,
+            baseline_distance_km=static_baseline_km,
         )
 
     # Start with Depot
@@ -153,7 +184,6 @@ def compute_route(
     coords.extend([(b.latitude, b.longitude) for b in priority_bins])
 
     base_matrix = _build_distance_matrix(coords)
-    baseline_km = naive_loop_driving_km(base_matrix)
 
     ordered_ids, leg_distances = optimize_route(
         bin_ids,
@@ -176,7 +206,7 @@ def compute_route(
         distances=leg_distances,
         optimized_distance_km=optimized_km,
         unoptimized_distance_km=unoptimized_km,
-        baseline_distance_km=baseline_km,
+        baseline_distance_km=static_baseline_km,
     )
     print(f"[Route] Optimized Path: {' -> '.join(result.route)}")
     return result
