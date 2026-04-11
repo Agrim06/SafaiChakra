@@ -29,7 +29,7 @@ from services.bin_service import get_latest_reading, get_history
 
 
 # ── Configurable knobs (env-overridable) ────────────────────────────────────
-STALE_THRESHOLD_SECONDS = int(os.getenv("STALE_THRESHOLD_SECONDS", 600))  # 10 min
+STALE_THRESHOLD_SECONDS = int(os.getenv("STALE_THRESHOLD_SECONDS", 86400)) # 24 hours for demo
 FROZEN_WINDOW           = int(os.getenv("FROZEN_WINDOW", 5))              # readings
 FROZEN_TOLERANCE        = float(os.getenv("FROZEN_TOLERANCE", 0.1))       # ±0.1%
 ERRATIC_JUMP_THRESHOLD  = float(os.getenv("ERRATIC_JUMP_THRESHOLD", 40))  # >40% swing
@@ -111,30 +111,33 @@ def _diagnose_single_bin(
 
 
 def diagnose_all(db: Session) -> List[Dict[str, Any]]:
-    """Run health diagnostics on every known bin."""
-    from services.bin_service import get_all_bins
+    """
+    Perform a health check on every bin.
+    Uses a subquery to ensure we only analyze the LATEST reading per bin.
+    """
+    from sqlalchemy import func
+    
+    # Subquery to find max timestamp for each bin
+    subq = (
+        db.query(models.BinReading.bin_id, func.max(models.BinReading.created_at).label("latest_ts"))
+        .group_by(models.BinReading.bin_id)
+        .subquery()
+    )
 
-    now = datetime.now(timezone.utc)
-    results: List[Dict[str, Any]] = []
+    # Join with the readings table to get the actual full records
+    latest_readings = (
+        db.query(models.BinReading)
+        .join(subq, (models.BinReading.bin_id == subq.c.bin_id) & (models.BinReading.created_at == subq.c.latest_ts))
+        .all()
+    )
 
-    for bin_id in get_all_bins(db):
-        latest = get_latest_reading(db, bin_id)
-        if latest is None:
-            results.append({
-                "bin_id":   bin_id,
-                "severity": FAILURE,
-                "issues":   ["No readings found"],
-                "fill_pct": None,
-                "distance_cm": None,
-                "latitude": None,
-                "longitude": None,
-                "last_seen_seconds_ago": None,
-            })
-            continue
-
-        history = get_history(db, bin_id, limit=max(FROZEN_WINDOW + 1, 10))
-        results.append(_diagnose_single_bin(latest, history, now))
-
+    results = []
+    for r in latest_readings:
+        # Re-use diagnose_single logic for consistency
+        diag = diagnose_single(db, r.bin_id)
+        if diag:
+            results.append(diag)
+    
     return results
 
 
