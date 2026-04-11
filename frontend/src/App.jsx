@@ -10,7 +10,7 @@ import AgentPanel from "./components/AgentPanel";
 import SavingsCard from "./components/SavingsCard";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS = 3000;
+const POLL_MS = 30000;
 
 export default function App() {
   const [allBins, setAllBins] = useState([]);
