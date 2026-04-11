@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
-import { ChevronDown, Zap, ShieldAlert, Loader2 } from "lucide-react";
+import { Zap, ShieldAlert, Loader2 } from "lucide-react";
 
 import Navbar from "./components/Navbar";
 import BinCard from "./components/BinCard";
@@ -8,11 +8,13 @@ import MapView from "./components/MapView";
 import ControlPanel from "./components/ControlPanel";
 import AgentPanel from "./components/AgentPanel";
 import SavingsCard from "./components/SavingsCard";
+import AnalyticsPage from "./components/AnalyticsPage";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 const POLL_MS = 300000
 
 export default function App() {
+  const [page, setPage] = useState("dashboard");
   const [allBins, setAllBins] = useState([]);
   const [activeBin, setActiveBin] = useState(null);
   const [statuses, setStatuses] = useState({});
@@ -173,9 +175,15 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-green)]/30 font-inter antialiased overflow-hidden transition-colors duration-300">
-      <Navbar lastUpdated={lastUpdated} isLive={isLive} />
+      <Navbar lastUpdated={lastUpdated} isLive={isLive} page={page} setPage={setPage} />
 
-      <main className="flex-1 overflow-hidden px-8 py-6 flex flex-col mt-16 slide-in">
+      {page === "analytics" && (
+        <div className="flex-1 overflow-hidden mt-16 slide-in">
+          <AnalyticsPage routeData={routeData} />
+        </div>
+      )}
+
+      <main className={`flex-1 overflow-hidden px-8 py-6 flex flex-col mt-16 slide-in ${page !== "dashboard" ? "hidden" : ""}`}>
         {error && (
           <div className="glass-panel border-red-500/20 bg-red-500/5 mb-4 px-4 py-3 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
