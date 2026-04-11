@@ -9,25 +9,27 @@ function FillGauge({ pct, threshold }) {
   const shadow = `0 4px 12px ${color}33`;
 
   return (
-    <div className="flex flex-col items-center gap-3 mt-1">
-      <div className="relative w-[50px] h-[90px]">
+    <div className="flex flex-col items-center gap-2 mt-1">
+      <div className="relative w-[40px] h-[70px]">
         {/* Lid (Tactical HUD Style) */}
-        <div className="absolute -top-[4px] left-1/2 -translate-x-1/2 w-[40px] h-1.5 bg-[var(--color-card-border)] rounded-full z-10" />
+        <div className="absolute -top-[3px] left-1/2 -translate-x-1/2 w-[32px] h-1.5 bg-[var(--color-card-border)] rounded-full z-10" />
         
         {/* Body (Solid Modern Cylinder) */}
         <div 
-          className="absolute inset-0 rounded-[12px] overflow-hidden bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] shadow-inner"
+          className="absolute inset-0 rounded-[10px] overflow-hidden bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] shadow-inner"
         >
           {/* Fill Layer */}
           <div 
             className="absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out" 
             style={{ 
               height: `${pct}%`, 
-              background: `linear-gradient(to top, ${color}, ${color}cc)`,
+              backgroundColor: color,
+              boxShadow: `0 0 15px ${color}88 inset, 0 0 20px ${color}44`,
+              backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.1), rgba(255,255,255,0.2))`
             }} 
           >
-            {/* Liquid Surface Shine */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-white/30" />
+            {/* Liquid Surface Glow */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/40 blur-[1px]" />
           </div>
           
           {/* Subtle Measurement Notches */}
@@ -44,8 +46,8 @@ function FillGauge({ pct, threshold }) {
         </div>
       </div>
       <div className="flex flex-col items-center">
-        <span className="text-[26px] font-black leading-none tabular-nums tracking-tighter" style={{ color }}>
-          {pct.toFixed(0)}<span className="text-[12px] font-bold text-[var(--color-text-dim)] ml-0.5">%</span>
+        <span className="text-[22px] font-black leading-none tabular-nums tracking-tighter" style={{ color }}>
+          {pct.toFixed(0)}<span className="text-[11px] font-bold text-[var(--color-text-dim)] ml-0.5">%</span>
         </span>
       </div>
     </div>
@@ -71,52 +73,48 @@ export default function BinCard({ status, loading, threshold = 70 }) {
   const accentColor = isCritical ? "var(--color-red)" : isWarning ? "var(--color-amber)" : "var(--color-green)";
 
   return (
-    <div className={`glass-panel p-5 relative overflow-hidden transition-all duration-500 border-[var(--color-card-border)] ${isCritical ? 'ring-2 ring-red-500/20' : ''}`}>
+    <div className={`glass-panel p-4 relative overflow-hidden transition-all duration-500 border-[var(--color-card-border)] ${isCritical ? 'ring-2 ring-red-500/20' : ''}`}>
       
       {/* Structural Corner Icon */}
       <div className="absolute -top-4 -right-4 opacity-[0.03] text-[var(--color-text)]">
-        <Zap size={120} />
+        <Zap size={100} />
       </div>
-
+ 
       {/* Header row */}
-      <div className="flex items-center justify-between mb-8 relative z-10">
-        <div className="flex items-center gap-4">
-          <div className="w-[46px] h-[46px] rounded-2xl flex items-center justify-center bg-[var(--color-bg)] border border-[var(--color-card-border)] shadow-sm">
-             <Trash2 size={20} style={{ color: accentColor }} />
+      <div className="flex items-start justify-between mb-5 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-[38px] h-[38px] rounded-2xl flex items-center justify-center bg-[var(--color-bg)] border border-[var(--color-card-border)] shadow-sm">
+             <Trash2 size={18} style={{ color: accentColor }} />
           </div>
           <div>
-            <p className="text-[10px] text-[var(--color-text-dim)] uppercase tracking-[0.25em] font-black mb-1">Focus Node</p>
-            <p className="text-2xl font-black text-[var(--color-text)] leading-none tracking-tight">{bin_id}</p>
+            <p className="text-[9px] text-[var(--color-text-dim)] uppercase tracking-[0.2em] font-black mb-0.5">Focus Node</p>
+            <p className="text-xl font-black text-[var(--color-text)] leading-none tracking-tight">{bin_id}</p>
           </div>
         </div>
-        
-        <div 
-          className="px-4 py-2 rounded-xl border-2 flex items-center gap-2 shadow-sm"
-          style={{ 
-            borderColor: `${accentColor}44`, 
-            backgroundColor: `var(--color-surface)`,
-            color: accentColor 
-          }}
-        >
-          {isCritical ? <AlertTriangle size={14} /> : <CheckCircle size={14} />}
-          <span className="text-[11px] font-black tracking-widest uppercase">{label}</span>
+
+        {/* Collection Needed Tag - Moved to top right */}
+        <div className="flex items-center gap-2 mt-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-bg)] border border-[var(--color-card-border)] shadow-inner">
+          <div className={`w-1.5 h-1.5 rounded-full ${isCritical ? 'bg-[var(--color-red)]' : 'bg-[var(--color-green)]'} animate-pulse`} />
+          <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em]">
+            {message || (isCritical ? "Collection Needed!" : "Optimal Status")}
+          </span>
         </div>
       </div>
 
       {/* Gauge + stats row */}
-      <div className="flex items-start gap-10 relative z-10">
+      <div className="flex items-start gap-6 relative z-10">
         <FillGauge pct={fill_pct} threshold={threshold} />
 
-        <div className="flex-1 flex flex-col gap-6 pt-1">
+        <div className="flex-1 flex flex-col gap-4 pt-0.5">
           {/* Progress Section */}
           <div>
-            <div className="flex justify-between items-end mb-3">
-              <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-dim)]">Substrate Level</span>
-              <span className="text-lg font-black tabular-nums" style={{ color: accentColor }}>
+            <div className="flex justify-between items-end mb-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-dim)]">Substrate Level</span>
+              <span className="text-md font-black tabular-nums" style={{ color: accentColor }}>
                 {fill_pct.toFixed(1)}%
               </span>
             </div>
-            <div className="h-2.5 w-full bg-[var(--color-bg)] rounded-full overflow-hidden border border-[var(--color-card-border)] shadow-inner">
+            <div className="h-2 w-full bg-[var(--color-bg)] rounded-full overflow-hidden border border-[var(--color-card-border)] shadow-inner">
               <div 
                 className="h-full transition-all duration-1000 ease-out"
                 style={{ 
@@ -129,26 +127,19 @@ export default function BinCard({ status, loading, threshold = 70 }) {
           </div>
 
           {/* Grid Stats - Deep Soothing Cards */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             {[
               { label: "State", val: is_alert ? "ALERT" : "STABLE", color: is_alert ? "var(--color-red)" : "var(--color-green)" },
               { label: "Free", val: `${(100 - fill_pct).toFixed(0)}%`, color: "var(--color-cyan)" },
               { label: "Latency", val: created_at ? "0.4s" : "--", color: "var(--color-purple)" },
             ].map(({ label, val, color }) => (
-              <div key={label} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-2xl p-2.5 text-center shadow-sm">
-                <p className="text-[9px] text-[var(--color-text-dim)] uppercase tracking-[0.2em] font-black mb-1.5">{label}</p>
-                <p className="text-[12px] font-black tracking-wider" style={{ color }}>{val}</p>
+              <div key={label} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-2xl p-2 text-center shadow-sm">
+                <p className="text-[8.5px] text-[var(--color-text-dim)] uppercase tracking-[0.2em] font-black mb-1">{label}</p>
+                <p className="text-[11px] font-black tracking-wider" style={{ color }}>{val}</p>
               </div>
             ))}
           </div>
 
-          {/* Status Message */}
-          <div className="flex items-center gap-2 mt-2">
-            <div className={`w-2 h-2 rounded-full ${isCritical ? 'bg-[var(--color-red)]' : 'bg-[var(--color-green)]'} animate-pulse`} />
-            <span className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide">
-              {message || "Telemetry Stream: Synced"}
-            </span>
-          </div>
         </div>
       </div>
     </div>

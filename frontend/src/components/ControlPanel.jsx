@@ -108,7 +108,7 @@ export default function ControlPanel({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle size={14} className="text-[var(--color-text-dim)]" />
-            <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.25em]">Global Sensitivity</span>
+            <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.25em]">Thresh</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-black tracking-tighter tabular-nums" style={{ color: `var(${fillColor === "var(--color-green)" ? "--color-green" : fillColor === "var(--color-red)" ? "--color-red" : "--color-amber"})` }}>

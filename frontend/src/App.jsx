@@ -25,6 +25,7 @@ export default function App() {
   const [isLive, setIsLive] = useState(false);
   const [error, setError] = useState(null);
   const [toastHidden, setToastHidden] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   // Hackathon AI Feature
   const [showPredictiveMap, setShowPredictiveMap] = useState(false);
@@ -123,6 +124,28 @@ export default function App() {
   const route = useMemo(() => routeData?.route ?? null, [routeData]);
   const activeStatus = useMemo(() => (activeBin ? statuses[activeBin] : null), [activeBin, statuses]);
 
+  const handleCloseToast = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setToastHidden(true);
+      setIsClosing(false);
+    }, 400); // sync with CSS duration
+  }, []);
+
+  // Handle 5-second auto-close for critical alerts
+  useEffect(() => {
+    if (activeStatus?.is_alert && !toastHidden && !isClosing) {
+      const timer = setTimeout(handleCloseToast, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeStatus?.is_alert, toastHidden, isClosing, activeBin, handleCloseToast]);
+
+  // Reset toast visibility when switching focus between bins
+  useEffect(() => {
+    setToastHidden(false);
+    setIsClosing(false);
+  }, [activeBin]);
+
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-green)]/30 font-inter antialiased overflow-hidden transition-colors duration-300">
       <Navbar lastUpdated={lastUpdated} isLive={isLive} />
@@ -139,7 +162,7 @@ export default function App() {
         )}
 
         {activeStatus?.is_alert && !toastHidden && (
-          <div className="fixed top-24 right-6 z-[1000] glass-panel border-red-500/30 bg-red-500/10 p-4 min-w-[340px] shadow-[var(--glow-neon)] animate-in slide-in-from-right-8">
+          <div className={`fixed top-24 right-6 z-[1000] glass-panel border-red-500/30 bg-red-500/10 p-4 min-w-[340px] shadow-[var(--glow-neon)] ${isClosing ? 'animate-alert-pop-out' : 'animate-alert-pop-in'}`}>
             <div className="flex gap-4">
               <div className="relative">
                 <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-2xl">🚨</div>
@@ -159,7 +182,7 @@ export default function App() {
                   {optimizing ? <Loader2 className="animate-spin mx-auto" size={14} /> : "Dispatch Fleet →"}
                 </button>
               </div>
-              <button onClick={() => setToastHidden(true)} className="self-start opacity-20 hover:opacity-100">✕</button>
+              <button onClick={handleCloseToast} className="self-start opacity-20 hover:opacity-100">✕</button>
             </div>
           </div>
         )}
