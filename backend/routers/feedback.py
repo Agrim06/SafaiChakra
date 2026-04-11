@@ -1,9 +1,79 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
+from fastapi.responses import HTMLResponse
 
 router = APIRouter(tags=["feedback"])
 
 
-@router.get("/feedback")
+@router.get("/feedback", response_class=HTMLResponse)
 def feedback(bin_id: str):
     print(f"Feedback received for bin {bin_id}")
-    return {"message": f"Feedback sent for bin {bin_id}"}
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bin Info</title>
+
+  <style>
+    body {{
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: white;
+    }}
+
+    .card {{
+      width: 85%;
+      max-width: 300px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(10px);
+      border-radius: 18px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+    }}
+
+    .icon {{
+      font-size: 32px;
+      margin-bottom: 10px;
+    }}
+
+    .title {{
+      font-size: 14px;
+      opacity: 0.6;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }}
+
+    .bin {{
+      font-size: 20px;
+      font-weight: bold;
+      margin: 8px 0 12px;
+    }}
+
+    .msg {{
+      font-size: 14px;
+      opacity: 0.85;
+      line-height: 1.5;
+    }}
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <div class="icon">🗑️</div>
+    <div class="title">Community Bin</div>
+    <div class="bin">{bin_id}</div>
+
+    <div class="msg">
+      Thank you for helping keep the city clean.  
+    </div>
+  </div>
+</body>
+</html>
+"""
