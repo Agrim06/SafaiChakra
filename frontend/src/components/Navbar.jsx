@@ -26,10 +26,10 @@ export default function Navbar({ lastUpdated, isLive }) {
           </div>
           <div className="flex flex-col">
             <div className="flex items-baseline leading-none">
-              <span className="text-[18px] font-black tracking-tight text-[var(--color-text)]">Safai</span>
-              <span className="text-[18px] font-black tracking-tight text-[var(--color-green)]">Chakra</span>
+              <span className="text-[22px] font-black tracking-tight text-[var(--color-text)]">Safai</span>
+              <span className="text-[22px] font-black tracking-tight text-[var(--color-green)]">Chakra</span>
             </div>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-dim)] mt-0.5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-text-dim)] mt-0.5">
               Operations Center V2.0
             </p>
           </div>
@@ -39,8 +39,8 @@ export default function Navbar({ lastUpdated, isLive }) {
         <div className="flex items-center gap-4">
           {/* Activity Readout */}
           <div className="hidden sm:flex items-center gap-2.5 text-[var(--color-text-dim)] pr-4 border-r-2 border-[var(--color-card-border)]">
-            <Activity size={14} className="animate-pulse" />
-            <span className="text-[11px] font-black tabular-nums tracking-widest text-[var(--color-text)]">
+            <Activity size={16} className="animate-pulse" />
+            <span className="text-[13px] font-black tabular-nums tracking-widest text-[var(--color-text)]">
               {lastUpdated || "--:--:--"}
             </span>
           </div>
@@ -57,7 +57,7 @@ export default function Navbar({ lastUpdated, isLive }) {
           {/* Live Heartbeat */}
           <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border-2 transition-all duration-500 shadow-sm ${isLive ? 'bg-[var(--color-green)]/5 border-[var(--color-green)]/20 text-[var(--color-green)]' : 'bg-red-500/5 border-red-500/20 text-red-500'}`}>
             <div className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse shadow-[0_0_8px_var(--color-green)]' : ''} bg-current`} />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em]">{isLive ? "LIVE" : "OFFLINE"}</span>
+            <span className="text-[12px] font-black uppercase tracking-[0.25em]">{isLive ? "LIVE" : "OFFLINE"}</span>
           </div>
         </div>
       </div>

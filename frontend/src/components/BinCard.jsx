@@ -46,8 +46,8 @@ function FillGauge({ pct, threshold }) {
         </div>
       </div>
       <div className="flex flex-col items-center">
-        <span className="text-[18px] font-black leading-none tabular-nums tracking-tighter" style={{ color }}>
-          {pct.toFixed(0)}<span className="text-[10px] font-bold text-[var(--color-text-dim)] ml-0.5">%</span>
+        <span className="text-[22px] font-black leading-none tabular-nums tracking-tighter" style={{ color }}>
+          {pct.toFixed(0)}<span className="text-[12px] font-bold text-[var(--color-text-dim)] ml-0.5">%</span>
         </span>
       </div>
     </div>
@@ -84,18 +84,20 @@ export default function BinCard({ status, loading, threshold = 70 }) {
       <div className="flex items-start justify-between mb-3.5 relative z-10">
         <div className="flex items-center gap-2.5">
           <div className="w-[32px] h-[32px] rounded-xl flex items-center justify-center bg-[var(--color-bg)] border border-[var(--color-card-border)] shadow-sm">
-             <Trash2 size={15} style={{ color: accentColor }} />
+             <Trash2 size={16} style={{ color: accentColor }} />
           </div>
           <div>
             <p className="text-[8px] text-[var(--color-text-dim)] uppercase tracking-[0.2em] font-black mb-0.5">Focus Node</p>
-            <p className="text-[16px] font-black text-[var(--color-text)] leading-none tracking-tight">{bin_id}</p>
+            <p className="text-[19px] font-black text-[var(--color-text)] leading-none tracking-tight">
+              {bin_id === "DEPOT_00" ? "Mission HUB" : `Bin ${parseInt(bin_id.replace("BIN_", ""), 10)}`}
+            </p>
           </div>
         </div>
 
         {/* Collection Needed Tag */}
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--color-bg)] border border-[var(--color-card-border)] shadow-inner">
-          <div className={`w-1 h-1 rounded-full ${isCritical ? 'bg-[var(--color-red)]' : 'bg-[var(--color-green)]'} animate-pulse`} />
-          <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-tight">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-bg)] border border-[var(--color-card-border)] shadow-inner">
+          <div className={`w-1.5 h-1.5 rounded-full ${isCritical ? 'bg-[var(--color-red)]' : 'bg-[var(--color-green)]'} animate-pulse`} />
+          <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-tight">
             {message || (isCritical ? "ALERT" : "STABLE")}
           </span>
         </div>
@@ -109,8 +111,8 @@ export default function BinCard({ status, loading, threshold = 70 }) {
           {/* Progress Section */}
           <div>
             <div className="flex justify-between items-end mb-1.5">
-              <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-dim)]">Substrate</span>
-              <span className="text-[13px] font-black tabular-nums" style={{ color: accentColor }}>
+              <span className="text-[10.5px] font-black uppercase tracking-widest text-[var(--color-text-dim)]">Substrate</span>
+              <span className="text-[15px] font-black tabular-nums" style={{ color: accentColor }}>
                 {fill_pct.toFixed(1)}%
               </span>
             </div>
@@ -134,8 +136,8 @@ export default function BinCard({ status, loading, threshold = 70 }) {
               { label: "Ping", val: created_at ? "0.4s" : "--", color: "var(--color-purple)" },
             ].map(({ label, val, color }) => (
               <div key={label} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-xl p-1.5 text-center shadow-sm">
-                <p className="text-[8px] text-[var(--color-text-dim)] uppercase tracking-tight font-black mb-0.5">{label}</p>
-                <p className="text-[10px] font-black tracking-tight" style={{ color }}>{val}</p>
+                <p className="text-[9.5px] text-[var(--color-text-dim)] uppercase tracking-tight font-black mb-0.5">{label}</p>
+                <p className="text-[12px] font-black tracking-tight" style={{ color }}>{val}</p>
               </div>
             ))}
           </div>

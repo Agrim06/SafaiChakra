@@ -153,9 +153,9 @@ function MapLegend({ threshold }) {
 
 function MapCanvas({ route, optimizing, statuses, locations, routeCoords, threshold, showPredictiveMap, predictiveData, recenterTrigger, isLight }) {
   const center = locations["DEPOT_00"] || [12.3106, 76.6450];
-  
+
   // Dynamic Map URL based on theme
-  const tileUrl = isLight 
+  const tileUrl = isLight
     ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
     : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 
@@ -192,11 +192,11 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
             >
               <Popup className="custom-popup">
                 <div className="relative w-full h-full flex flex-col items-center justify-center">
-                  <div 
-                    className="kinetic-ring" 
-                    style={{ '--ring-gradient': `conic-gradient(${color} ${p.spillover_risk}%, transparent 0%)` }} 
+                  <div
+                    className="kinetic-ring"
+                    style={{ '--ring-gradient': `conic-gradient(${color} ${p.spillover_risk}%, transparent 0%)` }}
                   />
-                  <span className="kinetic-id">{p.bin_id.replace("BIN_", "")}</span>
+                  <span className="kinetic-id">BIN_ {parseInt(p.bin_id.replace("BIN_", ""), 10)}</span>
                   <span className="kinetic-value">{p.spillover_risk}%</span>
                 </div>
               </Popup>
@@ -210,26 +210,26 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
           const pct = s.fill_pct ?? 0;
           const isCritical = s.is_alert || pct >= threshold;
           const isWarning = pct >= threshold - 30;
-          
+
           // Use dynamic CSS variables for colors
-          const color = isDepot 
-            ? "var(--color-cyan)" 
-            : isCritical ? "var(--color-red)" 
-            : isWarning ? "var(--color-amber)" 
-            : "var(--color-green)";
+          const color = isDepot
+            ? "var(--color-cyan)"
+            : isCritical ? "var(--color-red)"
+              : isWarning ? "var(--color-amber)"
+                : "var(--color-green)";
 
           return (
             <Marker key={s.bin_id} position={[s.latitude, s.longitude]} icon={isDepot ? makeDepotIcon() : makeIcon(color, isCritical)}>
               <Popup className="custom-popup">
                 <div className="relative w-full h-full flex flex-col items-center justify-center">
                   {!isDepot && (
-                    <div 
-                      className="kinetic-ring" 
-                      style={{ '--ring-gradient': `conic-gradient(${color} ${pct}%, transparent 0%)` }} 
+                    <div
+                      className="kinetic-ring"
+                      style={{ '--ring-gradient': `conic-gradient(${color} ${pct}%, transparent 0%)` }}
                     />
                   )}
-                  <span className="kinetic-id">{isDepot ? "HUB" : s.bin_id.replace("BIN_", "")}</span>
-                  <span className="kinetic-value">{isDepot ? "DEP" : `${pct.toFixed(0)}%`}</span>
+                  <span className="kinetic-id">{isDepot ? "Main HUB" : `BIN _0${parseInt(s.bin_id.replace("BIN_", ""), 10)}`}</span>
+                  <span className="kinetic-value">{isDepot ? "Dumpyard" : `${pct.toFixed(0)}%`}</span>
                 </div>
               </Popup>
             </Marker>
@@ -284,7 +284,7 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
           const lats = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
           setRoadPath(lats);
         }
-      }).catch(() => {});
+      }).catch(() => { });
   }, [routeSignature, JSON.stringify(locations)]);
 
   const displayPath = roadPath || (route?.map(id => locations[id]).filter(Boolean) || []);
@@ -310,7 +310,7 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
             Pathing...
           </span>
         )}
-        
+
         <button
           onClick={() => setRecenterCount(v => v + 1)}
           className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all text-slate-400 hover:text-[var(--color-text)] border border-transparent group flex items-center gap-2 pr-3"

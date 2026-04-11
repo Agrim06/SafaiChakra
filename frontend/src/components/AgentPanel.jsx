@@ -25,11 +25,11 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
             <Cpu size={14} className="text-[var(--color-purple)]" />
           </div>
           <div>
-            <h3 className="text-[12.5px] font-black uppercase tracking-widest text-[var(--color-text)] leading-none">Intelligence</h3>
-            <p className="text-[8.5px] font-bold text-[var(--color-text-dim)] uppercase tracking-tight mt-0.5">Automated Pipeline</p>
+            <h3 className="text-[16px] font-black uppercase tracking-widest text-[var(--color-text)] leading-none">Intelligence</h3>
+            <p className="text-[10px] font-bold text-[var(--color-text-dim)] uppercase tracking-tight mt-0.5">Automated Pipeline</p>
           </div>
         </div>
-        <div className={`text-[8.5px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border transition-colors ${
+        <div className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border transition-colors ${
           optimizing ? 'bg-[var(--color-purple)]/10 border-[var(--color-purple)]/30 text-[var(--color-purple)]' :
           hasRoute ? 'bg-[var(--color-green)]/10 border-[var(--color-green)]/30 text-[var(--color-green)]' :
           'bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)]'
@@ -74,10 +74,10 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
 
               {/* Step Labels */}
               <div className="absolute top-10 flex flex-col items-center text-center w-24">
-                <span className={`text-[8.5px] font-black uppercase tracking-widest mb-0.5 ${isActive ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>
+                <span className={`text-[10.5px] font-black uppercase tracking-widest mb-0.5 ${isActive ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>
                   {step.label}
                 </span>
-                <span className="text-[7.5px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter opacity-80">
+                <span className="text-[9.5px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter opacity-80">
                   {step.desc}
                 </span>
               </div>

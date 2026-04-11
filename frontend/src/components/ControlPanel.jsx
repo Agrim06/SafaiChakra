@@ -22,21 +22,21 @@ export default function ControlPanel({
 
       {/* ── Bin Selector: Tactical Dropdown ── */}
       <div className="flex flex-col gap-2 relative z-10">
-        <label className="text-[9px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] ml-1">
+        <label className="text-[11px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] ml-1">
           Node Focus Command
         </label>
         <div className="relative group">
           <select
             value={activeBin || ""}
             onChange={(e) => setActiveBin(e.target.value)}
-            className="w-full appearance-none bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text)] text-[10.5px] font-black uppercase tracking-wider rounded-xl px-3.5 py-3 outline-none focus:border-[var(--color-green)]/50 transition-all cursor-pointer shadow-sm"
+            className="w-full appearance-none bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text)] text-[12.5px] font-black uppercase tracking-wider rounded-xl px-4 py-3 outline-none focus:border-[var(--color-green)]/50 transition-all cursor-pointer shadow-sm"
           >
             {allBins.map((id) => {
               const s = statuses[id];
               const isAbnormal = s && (s.is_alert || s.fill_pct >= threshold);
               return (
                 <option key={id} value={id} className="bg-[var(--color-surface)] text-[var(--color-text)]">
-                  {id} {s ? ` — ${s.fill_pct.toFixed(0)}%` : ""} {isAbnormal ? " ⚠ ALERT" : ""}
+                  {id === "DEPOT_00" ? "Mission HUB" : `Bin ${parseInt(id.replace("BIN_", ""), 10)}`} {s ? ` — ${s.fill_pct.toFixed(0)}%` : ""} {isAbnormal ? " ⚠ ALERT" : ""}
                 </option>
               );
             })}
@@ -67,37 +67,37 @@ export default function ControlPanel({
         <button
           onClick={onOptimize}
           disabled={optimizing}
-          className="active:scale-[0.98] transition-all relative overflow-hidden flex items-center justify-between px-3.5 py-3 rounded-xl bg-[var(--color-green)]/10 border-2 border-[var(--color-green)]/30 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/20 group shadow-sm"
+          className="active:scale-[0.98] transition-all relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-xl bg-[var(--color-green)]/10 border-2 border-[var(--color-green)]/30 hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/20 group shadow-sm"
         >
-          <div className="flex items-center gap-2.5">
-            <Route size={16} className="text-[var(--color-green)] group-hover:scale-110 transition-transform" />
-            <span className="text-[10.5px] font-black text-[var(--color-text)] uppercase tracking-[0.1em]">
+          <div className="flex items-center gap-3">
+            <Route size={18} className="text-[var(--color-green)] group-hover:scale-110 transition-transform" />
+            <span className="text-[12.5px] font-black text-[var(--color-text)] uppercase tracking-[0.1em]">
               {optimizing ? "Computing..." : "Optimize Route"}
             </span>
           </div>
-          <span className="text-[7.5px] font-black bg-[var(--color-green)] text-[var(--color-bg)] px-1.5 py-0.5 rounded leading-none">OR-TOOLS</span>
+          <span className="text-[9px] font-black bg-[var(--color-green)] text-[var(--color-bg)] px-2 py-0.5 rounded leading-none">OR-TOOLS</span>
         </button>
 
         {/* Alert Button */}
         <button
           onClick={onSimulateAlert}
-          className="active:scale-[0.98] transition-all flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-[var(--color-red)] hover:border-[var(--color-red)]/30 hover:bg-[var(--color-red)]/5 group shadow-sm"
+          className="active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-[var(--color-red)] hover:border-[var(--color-red)]/30 hover:bg-[var(--color-red)]/5 group shadow-sm"
         >
-          <Flame size={14} className="transition-colors" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em]">Simulate Emergency</span>
+          <Flame size={16} className="transition-colors" />
+          <span className="text-[11.5px] font-bold uppercase tracking-[0.1em]">Simulate Emergency</span>
         </button>
 
         {/* Predictive AI Toggle */}
         <button
           onClick={onTogglePredict}
-          className={`active:scale-[0.98] transition-all flex items-center gap-2.5 px-3.5 py-3 rounded-xl border-2 shadow-sm ${
+          className={`active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-sm ${
             showPredictiveMap 
               ? "bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/40 text-[var(--color-cyan)]" 
               : "bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg)]/80"
           } group`}
         >
-          <span className={`text-[12px] ${showPredictiveMap ? 'animate-bounce' : ''}`}>⚡</span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em]">
+          <span className={`text-[14px] ${showPredictiveMap ? 'animate-bounce' : ''}`}>⚡</span>
+          <span className="text-[11.5px] font-bold uppercase tracking-[0.1em]">
             {showPredictiveMap ? "Forecast Active" : "Predict Spillover"}
           </span>
           {showPredictiveMap && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
@@ -107,15 +107,15 @@ export default function ControlPanel({
       {/* ── Threshold Slider Tile ── */}
       <div className="bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] rounded-2xl p-3 pt-4 relative overflow-hidden group shadow-inner">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={12} className="text-[var(--color-text-dim)]" />
-            <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.1em]">Target Threshold</span>
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={14} className="text-[var(--color-text-dim)]" />
+            <span className="text-[11px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.1em]">Target Threshold</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-black tracking-tighter tabular-nums" style={{ color: `var(${fillColor === "var(--color-green)" ? "--color-green" : fillColor === "var(--color-red)" ? "--color-red" : "--color-amber"})` }}>
+            <span className="text-xl font-black tracking-tighter tabular-nums" style={{ color: `var(${fillColor === "var(--color-green)" ? "--color-green" : fillColor === "var(--color-red)" ? "--color-red" : "--color-amber"})` }}>
               {pct}
             </span>
-            <span className="text-[9px] font-black text-[var(--color-text-dim)]">%</span>
+            <span className="text-[11px] font-black text-[var(--color-text-dim)]">%</span>
           </div>
         </div>
 
