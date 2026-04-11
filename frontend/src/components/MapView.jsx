@@ -25,13 +25,13 @@ const makeIcon = (color, pulse = false) =>
   L.divIcon({
     className: "custom-div-icon",
     html: `
-      <div style="position:relative;width:14px;height:14px;display:flex;align-items:center;justify-content:center;">
-        ${pulse ? `<div style="position:absolute;inset:-4px;border-radius:2px;transform:rotate(45deg);background:${color};opacity:0.25;animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : ""}
-        <div style="width:14px;height:14px;transform:rotate(45deg);border:1px solid rgba(255,255,255,0.4);border-radius:2px;background:${color};box-shadow:0 0 10px ${color}88;"></div>
-        <div style="position:absolute;width:4px;height:4px;background:white;border-radius:50%;opacity:0.8;"></div>
+      <div style="position:relative;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
+        ${pulse ? `<div style="position:absolute;inset:-6px;border-radius:3px;transform:rotate(45deg);background:${color};opacity:0.3;animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : ""}
+        <div style="width:20px;height:20px;transform:rotate(45deg);border:1.5px solid rgba(255,255,255,0.6);border-radius:3px;background:${color};box-shadow:0 0 14px ${color}AA;"></div>
+        <div style="position:absolute;width:6px;height:6px;background:white;border-radius:50%;opacity:0.9;"></div>
       </div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
   });
 
 const makeDepotIcon = () =>
@@ -312,7 +312,7 @@ function MapLegend({ threshold, hasTraffic }) {
   const items = [
     { color: "var(--color-cyan)", label: "Depot" },
     { color: "var(--color-green)", label: `Normal` },
-    { color: "var(--color-amber)", label: `Warning` },
+    { color: "#eab308", label: `Warning` },
     { color: "var(--color-red)", label: `Alert` },
     { color: "var(--color-purple)", label: "Route" },
   ];
@@ -381,7 +381,7 @@ function MapCanvas({
           const risk = p.spillover_risk;
           const radius = risk > 80 ? 25 : risk > 50 ? 18 : 12;
           const opacity = risk > 80 ? 0.3 : risk > 50 ? 0.2 : 0.15;
-          const color = risk > 80 ? "#ff4d4d" : risk > 50 ? "#f59e0b" : "#00dbe9";
+          const color = risk > 80 ? "#ff4d4d" : risk > 50 ? "#eab308" : "#00dbe9";
           return (
             <CircleMarker
               key={`pred-${p.bin_id}`}
@@ -421,7 +421,7 @@ function MapCanvas({
           const color = isDepot
             ? "var(--color-cyan)"
             : isCritical ? "var(--color-red)"
-              : isWarning ? "var(--color-amber)"
+              : isWarning ? "#eab308"
                 : "var(--color-green)";
 
           return (
