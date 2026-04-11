@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
-from schemas import RouteResponse
+from schemas import OptimizeRouteRequest, RouteResponse
 from services import route_service
 
 router = APIRouter(tags=["Route"])
@@ -21,7 +21,7 @@ ALERT_THRESHOLD = float(os.getenv("ALERT_THRESHOLD", 70.0))
 
 
 @router.get("/optimize-route", response_model=RouteResponse)
-def optimize_route(
+def optimize_route_get(
     threshold: float = Query(
         default=None,
         ge=0,
@@ -39,3 +39,22 @@ def optimize_route(
     """
     effective_threshold = threshold if threshold is not None else ALERT_THRESHOLD
     return route_service.compute_route(db, threshold=effective_threshold)
+
+
+@router.post("/optimize-route", response_model=RouteResponse)
+def optimize_route_post(
+    payload: OptimizeRouteRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Same as GET **optimize-route**, plus optional **trafficZones** so OR-Tools can penalize or
+    forbid arcs whose straight bin-to-bin chord crosses a user-drawn congestion segment.
+    """
+    effective_threshold = payload.threshold if payload.threshold is not None else ALERT_THRESHOLD
+    zones = [z.model_dump() for z in payload.traffic_zones] if payload.traffic_zones else None
+    return route_service.compute_route(
+        db,
+        threshold=effective_threshold,
+        traffic_zones=zones,
+        traffic_mode=payload.traffic_mode,
+    )

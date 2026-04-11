@@ -1,4 +1,4 @@
-import { RefreshCw, Route, Flame, AlertTriangle, ChevronDown, Zap } from "lucide-react";
+import { RefreshCw, Route, Flame, AlertTriangle, ChevronDown, Zap, Brush, Trash2 } from "lucide-react";
 
 export default function ControlPanel({
   onRefresh, onOptimize, onSimulateAlert,
@@ -6,7 +6,13 @@ export default function ControlPanel({
   threshold, onThresholdChange,
   optimizing, loading,
   showPredictiveMap, onTogglePredict,
-  allBins, activeBin, setActiveBin, statuses
+  allBins, activeBin, setActiveBin, statuses,
+  drawTrafficEnabled = false,
+  onToggleDrawTraffic = () => {},
+  trafficStrokeCount = 0,
+  onClearTraffic = () => {},
+  trafficStrictAvoid = false,
+  onTrafficStrictAvoidChange = () => {},
 }) {
   const pct = threshold;
   const fillPos = ((pct - 30) / (90 - 30)) * 100;
@@ -102,6 +108,47 @@ export default function ControlPanel({
           </span>
           {showPredictiveMap && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
         </button>
+
+        <div className="rounded-xl border-2 border-[var(--color-card-border)] bg-[var(--color-bg)] p-3 space-y-2 shadow-sm">
+          <div className="flex items-center justify-between px-0.5">
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-dim)]">Traffic overlay</span>
+            {trafficStrokeCount > 0 && (
+              <span className="text-[9px] font-black tabular-nums text-[var(--color-text-muted)]">{trafficStrokeCount} stroke{trafficStrokeCount !== 1 ? "s" : ""}</span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onToggleDrawTraffic}
+            className={`active:scale-[0.98] transition-all w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-sm ${
+              drawTrafficEnabled
+                ? "bg-red-500/10 border-red-500/40 text-red-400"
+                : "bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:border-red-500/25"
+            }`}
+          >
+            <Brush size={16} />
+            <span className="text-[11.5px] font-bold uppercase tracking-[0.1em]">Draw Traffic</span>
+            {drawTrafficEnabled && <span className="ml-auto text-[9px] font-black uppercase tracking-widest">On</span>}
+          </button>
+          {trafficStrokeCount > 0 && (
+            <button
+              type="button"
+              onClick={onClearTraffic}
+              className="active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-red-400 hover:border-red-500/30 text-[10px] font-black uppercase tracking-widest"
+            >
+              <Trash2 size={14} />
+              Clear traffic
+            </button>
+          )}
+          <label className="flex items-center gap-2 px-1 pt-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={Boolean(trafficStrictAvoid)}
+              onChange={(e) => onTrafficStrictAvoidChange?.(e.target.checked)}
+              className="rounded border-[var(--color-card-border)]"
+            />
+            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide">Strict avoidance (no crossing)</span>
+          </label>
+        </div>
       </div>
 
       {/* ── Threshold Slider Tile ── */}

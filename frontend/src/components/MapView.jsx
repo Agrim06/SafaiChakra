@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   MapContainer,
@@ -70,6 +70,187 @@ function buildLocations(statuses) {
   return locs;
 }
 
+const OSRM = "https://router.project-osrm.org";
+
+function resampleLatLngPath(points, maxPoints) {
+  if (!points?.length || points.length <= maxPoints) return points;
+  const out = [];
+  const n = points.length;
+  const step = (n - 1) / (maxPoints - 1);
+  for (let k = 0; k < maxPoints; k += 1) {
+    const idx = Math.min(n - 1, Math.round(k * step));
+    out.push(points[idx]);
+  }
+  return out;
+}
+
+/** Driving geometry through [lat,lng] waypoints; chain legs if one request fails. */
+async function osrmRoadThrough(waypointsLatLng) {
+  if (!waypointsLatLng || waypointsLatLng.length < 2) return null;
+  const qs = new URLSearchParams({ overview: "full", geometries: "geojson", steps: "false" });
+  const q = qs.toString();
+  const path = waypointsLatLng.map(([lat, lng]) => `${lng},${lat}`).join(";");
+  try {
+    const res = await fetch(`${OSRM}/route/v1/driving/${path}?${q}`);
+    const data = await res.json();
+    if (data.code === "Ok" && data.routes?.[0]?.geometry?.coordinates?.length) {
+      return data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
+    }
+  } catch {
+    /* fall through */
+  }
+  const merged = [];
+  for (let i = 0; i < waypointsLatLng.length - 1; i += 1) {
+    const a = waypointsLatLng[i];
+    const b = waypointsLatLng[i + 1];
+    try {
+      const res = await fetch(`${OSRM}/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}?${q}`);
+      const data = await res.json();
+      if (data.code !== "Ok" || !data.routes?.[0]?.geometry?.coordinates) continue;
+      const g = data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
+      if (!merged.length) merged.push(...g);
+      else merged.push(...g.slice(1));
+    } catch {
+      /* skip leg */
+    }
+  }
+  return merged.length >= 2 ? merged : null;
+}
+
+/** Snap scribble: OSRM match (wide radius) then route fallback. */
+async function snapFreehandToRoads(latLngPairs) {
+  const sampled = resampleLatLngPath(latLngPairs, 48);
+  if (!sampled || sampled.length < 2) return sampled;
+  const n = sampled.length;
+  const coordPath = sampled.map(([lat, lng]) => `${lng},${lat}`).join(";");
+  const qs = new URLSearchParams({
+    overview: "full",
+    geometries: "geojson",
+    steps: "false",
+    radiuses: Array(n).fill("55").join(";"),
+  });
+  try {
+    const res = await fetch(`${OSRM}/match/v1/driving/${coordPath}?${qs.toString()}`);
+    const data = await res.json();
+    if (data.code === "Ok" && Array.isArray(data.matchings) && data.matchings.length) {
+      const merged = [];
+      for (const m of data.matchings) {
+        const coords = m.geometry?.coordinates;
+        if (!coords?.length) continue;
+        for (const c of coords) merged.push([c[1], c[0]]);
+      }
+      if (merged.length >= 2) return merged;
+    }
+  } catch {
+    /* fall through */
+  }
+  const road = await osrmRoadThrough([sampled[0], sampled[sampled.length - 1]]);
+  return road || sampled;
+}
+
+function TrafficDrawHandler({ enabled, onStrokeComplete }) {
+  const map = useMap();
+  const previewRef = useRef(null);
+  const drawingRef = useRef(false);
+  const pointsRef = useRef([]);
+
+  useEffect(() => {
+    const el = map.getContainer();
+    if (enabled) el.style.cursor = "crosshair";
+    else el.style.cursor = "";
+    return () => {
+      el.style.cursor = "";
+    };
+  }, [enabled, map]);
+
+  useEffect(() => {
+    if (!enabled) {
+      drawingRef.current = false;
+      pointsRef.current = [];
+      if (previewRef.current) {
+        map.removeLayer(previewRef.current);
+        previewRef.current = null;
+      }
+      return undefined;
+    }
+
+    function removePreview() {
+      if (previewRef.current) {
+        map.removeLayer(previewRef.current);
+        previewRef.current = null;
+      }
+    }
+
+    function syncPreview() {
+      const pts = pointsRef.current;
+      if (!pts.length) {
+        removePreview();
+        return;
+      }
+      if (previewRef.current) previewRef.current.setLatLngs(pts);
+      else {
+        previewRef.current = L.polyline(pts, {
+          color: "#f97316",
+          weight: 4,
+          dashArray: "6 5",
+          opacity: 0.95,
+        }).addTo(map);
+      }
+    }
+
+    function onDown(e) {
+      if (e.originalEvent && e.originalEvent.button !== 0) return;
+      drawingRef.current = true;
+      pointsRef.current = [e.latlng];
+      map.dragging.disable();
+      map.doubleClickZoom.disable();
+      syncPreview();
+    }
+
+    function onMove(e) {
+      if (!drawingRef.current) return;
+      const pts = pointsRef.current;
+      const last = pts[pts.length - 1];
+      if (last && typeof last.distanceTo === "function" && last.distanceTo(e.latlng) < 4) return;
+      pts.push(e.latlng);
+      if (pts.length % 4 === 0) syncPreview();
+    }
+
+    async function onUp() {
+      if (!drawingRef.current) return;
+      drawingRef.current = false;
+      map.dragging.enable();
+      map.doubleClickZoom.enable();
+      const raw = pointsRef.current.map((ll) => [ll.lat, ll.lng]);
+      pointsRef.current = [];
+      syncPreview();
+      removePreview();
+
+      if (raw.length < 2) return;
+      const snapped = await snapFreehandToRoads(raw);
+      if (snapped?.length >= 2) onStrokeComplete(snapped);
+    }
+
+    map.on("mousedown", onDown);
+    map.on("mousemove", onMove);
+    map.on("mouseup", onUp);
+    map.on("mouseleave", onUp);
+
+    return () => {
+      map.off("mousedown", onDown);
+      map.off("mousemove", onMove);
+      map.off("mouseup", onUp);
+      map.off("mouseleave", onUp);
+      removePreview();
+      drawingRef.current = false;
+      map.dragging.enable();
+      map.doubleClickZoom.enable();
+    };
+  }, [enabled, map, onStrokeComplete]);
+
+  return null;
+}
+
 function MapController({ route, locations, recenterTrigger }) {
   const map = useMap();
   useEffect(() => {
@@ -127,13 +308,14 @@ function AnimatedTruck({ routeCoords }) {
   return <Marker position={truckPos} icon={makeTruckIcon()} zIndexOffset={1000} />;
 }
 
-function MapLegend({ threshold }) {
+function MapLegend({ threshold, hasTraffic }) {
   const items = [
     { color: "var(--color-cyan)", label: "Depot" },
     { color: "var(--color-green)", label: `Normal (<${threshold - 30}%)` },
     { color: "var(--color-amber)", label: `Warning (<${threshold}%)` },
     { color: "var(--color-red)", label: `Critical (>${threshold}%)` },
-    { color: "var(--color-purple)", label: "Route Path" },
+    { color: "#2563eb", label: "Optimized route" },
+    ...(hasTraffic ? [{ color: "#ef4444", label: "Traffic (drawn)" }] : []),
   ];
 
   return (
@@ -151,7 +333,21 @@ function MapLegend({ threshold }) {
   );
 }
 
-function MapCanvas({ route, optimizing, statuses, locations, routeCoords, threshold, showPredictiveMap, predictiveData, recenterTrigger, isLight }) {
+function MapCanvas({
+  route,
+  optimizing,
+  statuses,
+  locations,
+  routeCoords,
+  threshold,
+  showPredictiveMap,
+  predictiveData,
+  recenterTrigger,
+  isLight,
+  trafficStrokes,
+  drawTrafficEnabled,
+  onAddTrafficStroke,
+}) {
   const center = locations["DEPOT_00"] || [12.3106, 76.6450];
 
   // Dynamic Map URL based on theme
@@ -169,6 +365,19 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
         attributionControl={false}
       >
         <TileLayer url={tileUrl} />
+
+        {Array.isArray(trafficStrokes) &&
+          trafficStrokes.map((positions, idx) => (
+            <Polyline
+              key={`traffic-stroke-${idx}`}
+              positions={positions}
+              pathOptions={{ color: "#ef4444", weight: 5, opacity: 0.9 }}
+            />
+          ))}
+
+        {drawTrafficEnabled && (
+          <TrafficDrawHandler enabled={drawTrafficEnabled} onStrokeComplete={onAddTrafficStroke} />
+        )}
 
         {/* ── Predictive AI Layer ── */}
         {showPredictiveMap && predictiveData && predictiveData.map((p) => {
@@ -238,8 +447,8 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
 
         {routeCoords.length > 1 && (
           <>
-            <Polyline positions={routeCoords} color="var(--color-purple)" weight={4} opacity={0.7} />
-            <Polyline positions={routeCoords} color="var(--color-purple)" weight={10} opacity={0.15} />
+            <Polyline positions={routeCoords} pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.85 }} />
+            <Polyline positions={routeCoords} pathOptions={{ color: "#2563eb", weight: 12, opacity: 0.12 }} />
             {!optimizing && <AnimatedTruck routeCoords={routeCoords} />}
           </>
         )}
@@ -247,12 +456,22 @@ function MapCanvas({ route, optimizing, statuses, locations, routeCoords, thresh
         <MapController route={route} locations={locations} recenterTrigger={recenterTrigger} />
       </MapContainer>
 
-      <MapLegend threshold={threshold} />
+      <MapLegend threshold={threshold} hasTraffic={trafficStrokes?.length > 0} />
     </div>
   );
 }
 
-export default function MapView({ route, optimizing, statuses, threshold = 70, showPredictiveMap, predictiveData }) {
+export default function MapView({
+  route,
+  optimizing,
+  statuses,
+  threshold = 70,
+  showPredictiveMap,
+  predictiveData,
+  trafficStrokes = [],
+  drawTrafficEnabled = false,
+  onAddTrafficStroke,
+}) {
   const [expanded, setExpanded] = useState(false);
   const [roadPath, setRoadPath] = useState(null);
   const [recenterCount, setRecenterCount] = useState(0);
@@ -260,6 +479,13 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
 
   const locations = buildLocations(statuses);
   const routeSignature = route?.join("-") || "none";
+
+  const handleStroke = useCallback(
+    (positions) => {
+      if (typeof onAddTrafficStroke === "function") onAddTrafficStroke(positions);
+    },
+    [onAddTrafficStroke]
+  );
 
   // Watch for theme changes from the button in index.html
   useEffect(() => {
@@ -271,20 +497,21 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
   }, []);
 
   useEffect(() => {
-    if (!route || route.length < 2) { setRoadPath(null); return; }
-    const coords = route.map(id => locations[id]).filter(Boolean);
+    if (!route || route.length < 2) {
+      setRoadPath(null);
+      return;
+    }
+    const coords = route.map((id) => locations[id]).filter(Boolean);
     if (coords.length < 2) return;
 
     setRoadPath(coords);
-
-    fetch(`https://router.project-osrm.org/route/v1/driving/${coords.map(c => `${c[1]},${c[0]}`).join(";")}?overview=full&geometries=geojson`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.routes?.[0]) {
-          const lats = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-          setRoadPath(lats);
-        }
-      }).catch(() => { });
+    let cancelled = false;
+    osrmRoadThrough(coords).then((path) => {
+      if (!cancelled && path?.length >= 2) setRoadPath(path);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [routeSignature, JSON.stringify(locations)]);
 
   const displayPath = roadPath || (route?.map(id => locations[id]).filter(Boolean) || []);
@@ -293,8 +520,8 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
     <div className="flex items-center justify-between px-5 py-3 bg-[var(--color-surface)] border-b border-[var(--color-card-border)] backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <div className="relative flex items-center justify-center">
-          <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></div>
-          <div className="absolute w-2 h-2 rounded-full bg-purple-500 animate-ping opacity-40"></div>
+          <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div>
+          <div className="absolute w-2 h-2 rounded-full bg-blue-500 animate-ping opacity-40"></div>
         </div>
         <div>
           <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-text)]">
@@ -305,7 +532,7 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
 
       <div className="flex items-center gap-2">
         {optimizing && (
-          <span className="flex items-center gap-2 text-[10px] font-black text-purple-400 uppercase tracking-widest mr-2">
+          <span className="flex items-center gap-2 text-[10px] font-black text-blue-400 uppercase tracking-widest mr-2">
             <Navigation size={12} className="animate-pulse" />
             Pathing...
           </span>
@@ -346,6 +573,9 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
             predictiveData={predictiveData}
             recenterTrigger={recenterCount}
             isLight={isLight}
+            trafficStrokes={trafficStrokes}
+            drawTrafficEnabled={drawTrafficEnabled}
+            onAddTrafficStroke={handleStroke}
           />
         </div>
       </div>
@@ -366,6 +596,9 @@ export default function MapView({ route, optimizing, statuses, threshold = 70, s
                 predictiveData={predictiveData}
                 recenterTrigger={recenterCount}
                 isLight={isLight}
+                trafficStrokes={trafficStrokes}
+                drawTrafficEnabled={drawTrafficEnabled}
+                onAddTrafficStroke={handleStroke}
               />
             </div>
           </div>

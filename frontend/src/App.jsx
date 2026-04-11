@@ -31,6 +31,10 @@ export default function App() {
   const [showPredictiveMap, setShowPredictiveMap] = useState(false);
   const [predictiveData, setPredictiveData] = useState(null);
 
+  const [trafficStrokes, setTrafficStrokes] = useState([]);
+  const [drawTrafficEnabled, setDrawTrafficEnabled] = useState(false);
+  const [trafficStrictAvoid, setTrafficStrictAvoid] = useState(false);
+
   // 1. Fetch all known bins
   const fetchAllBins = useCallback(async () => {
     try {
@@ -85,16 +89,37 @@ export default function App() {
     };
   }, [fetchData, autoRefresh]);
 
-  const handleOptimize = async () => {
+  const addTrafficStroke = useCallback((positions) => {
+    if (!positions?.length) return;
+    setTrafficStrokes((prev) => [...prev, positions]);
+  }, []);
+
+  const handleOptimize = useCallback(async () => {
     setOptimizing(true);
     try {
-      const { data } = await axios.get(`${API_BASE}/optimize-route`, { params: { threshold } });
+      const trafficZones = [];
+      for (const stroke of trafficStrokes) {
+        for (let i = 0; i < stroke.length - 1; i += 1) {
+          trafficZones.push({
+            start: [stroke[i][0], stroke[i][1]],
+            end: [stroke[i + 1][0], stroke[i + 1][1]],
+            severity: "high",
+          });
+        }
+      }
+      const { data } = await axios.post(`${API_BASE}/optimize-route`, {
+        threshold,
+        trafficZones,
+        trafficMode: trafficStrictAvoid ? "avoid" : "penalize",
+      });
       setRouteData(data);
       setError(null);
     } catch (err) {
       setError("Routing Engine Offline.");
-    } finally { setOptimizing(false); }
-  };
+    } finally {
+      setOptimizing(false);
+    }
+  }, [threshold, trafficStrokes, trafficStrictAvoid]);
 
   const handleSimulateAlert = async () => {
     if (!activeBin) return;
@@ -206,6 +231,12 @@ export default function App() {
               activeBin={activeBin}
               setActiveBin={setActiveBin}
               statuses={statuses}
+              drawTrafficEnabled={drawTrafficEnabled}
+              onToggleDrawTraffic={() => setDrawTrafficEnabled((v) => !v)}
+              trafficStrokeCount={trafficStrokes.length}
+              onClearTraffic={() => setTrafficStrokes([])}
+              trafficStrictAvoid={trafficStrictAvoid}
+              onTrafficStrictAvoidChange={setTrafficStrictAvoid}
             />
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
 
@@ -226,6 +257,9 @@ export default function App() {
                 threshold={threshold}
                 showPredictiveMap={showPredictiveMap}
                 predictiveData={predictiveData}
+                trafficStrokes={trafficStrokes}
+                drawTrafficEnabled={drawTrafficEnabled}
+                onAddTrafficStroke={addTrafficStroke}
               />
             </div>
             <div className="shrink-0">
