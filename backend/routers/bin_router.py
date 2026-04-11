@@ -52,7 +52,7 @@ def get_bin_status(bin_id: str, db: Session = Depends(get_db)):
         is_alert    = reading.is_alert,
         message     = "Collection needed!" if reading.is_alert else "All good.",
         created_at  = reading.created_at,
-        spillover_risk = bin_service.calculate_predictive_risk(reading.bin_id, reading.fill_pct),
+        spillover_risk = bin_service.calculate_predictive_risk(db, reading.bin_id, reading.fill_pct),
     )
 
 
@@ -85,8 +85,8 @@ def list_all_bins(db: Session = Depends(get_db)):
 @router.get("/predict")
 def get_predictive_heatmap(db: Session = Depends(get_db)):
     """
-    Hackathon Feature: AI Predictive Heatmap
-    Uses a simple heuristic velocity multiplier to simulate 24-hour spillover risk.
+    Next-day spillover risk: HistGradientBoostingRegressor trained on synthetic daily-fill series,
+    features from each bin's historical max-fill-per-day + current reading.
     """
     from schemas import BinPredictResponse, BinPredictItem
     
@@ -97,8 +97,7 @@ def get_predictive_heatmap(db: Session = Depends(get_db)):
         reading = bin_service.get_latest_reading(db, bid)
         if not reading: continue
         
-        # Heuristic simulation deterministic call
-        risk = bin_service.calculate_predictive_risk(bid, reading.fill_pct)
+        risk = bin_service.calculate_predictive_risk(db, bid, reading.fill_pct)
             
         predictions.append(BinPredictItem(
             bin_id=bid,

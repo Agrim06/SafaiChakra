@@ -10,12 +10,13 @@ Business logic for route planning:
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
 import models
-from route_optimizer import optimize_route
+from route_optimizer import _build_distance_matrix, naive_loop_driving_km, optimize_route
 from schemas import RouteResponse
 
 
@@ -45,38 +46,29 @@ def _get_latest_readings(db: Session) -> List[models.BinReading]:
     )
 
 
+SPILLOVER_HIGH_RISK = 72  # include below-threshold stops when prediction mode is on
+
+
 def get_priority_bins(
     db: Session,
     threshold: float = ALERT_THRESHOLD,
+    *,
+    use_spillover_prediction: bool = False,
 ) -> List[models.BinReading]:
-    """
-    Return the *latest* reading for every bin that is EITHER 
-    at or above `threshold` OR has a high 24h predictive spillover risk.
-    """
-    from services.bin_service import calculate_predictive_risk
-
     all_latest = _get_latest_readings(db)
-    priority_bins = []
+    priority_bins: List[models.BinReading] = []
 
     for r in all_latest:
         if r.latitude is None or r.longitude is None:
             continue
-            
-        # 1. Base rule: currently over Threshold
-        is_priority = (r.fill_pct >= threshold)
-        
-        # 2. Hackathon predictive rule: simulated high spillover risk
-        if not is_priority:
-            risk = calculate_predictive_risk(r.bin_id, r.fill_pct)
-            if risk >= 80:
-                is_priority = True
 
-        # 3. Opportunistic Rule: Medium fill bins (e.g. 45%+) with moderate risk
-        # This provides examples of picking up medium fill bins to prevent future spillovers
-        # when the fleet is already active.
-        if not is_priority and r.fill_pct >= 45:
-            risk = calculate_predictive_risk(r.bin_id, r.fill_pct)
-            if risk >= 75:
+        is_priority = r.fill_pct >= threshold
+
+        if not is_priority and use_spillover_prediction:
+            from services.bin_service import calculate_predictive_risk
+
+            risk = calculate_predictive_risk(db, r.bin_id, r.fill_pct)
+            if risk >= SPILLOVER_HIGH_RISK:
                 is_priority = True
 
         if is_priority:
@@ -91,18 +83,47 @@ def get_all_bins_with_coords(db: Session) -> List[models.BinReading]:
     return [r for r in all_latest if r.latitude is not None and r.longitude is not None]
 
 
+def _natural_bin_id_key(bin_id: str) -> Tuple[Any, ...]:
+    parts = re.split(r"(\d+)", bin_id)
+    key: List[Any] = []
+    for p in parts:
+        if not p:
+            continue
+        if p.isdigit():
+            key.append(int(p))
+        else:
+            key.append(p.lower())
+    return tuple(key)
+
+
+def static_full_city_driving_km(
+    depot_lat: float,
+    depot_lon: float,
+    all_bins: List[models.BinReading],
+) -> float:
+    """Fixed municipal schedule: depot → every non-depot bin (stable bin_id order) → depot, road distances."""
+    if not all_bins:
+        return 0.0
+    ordered = sorted(all_bins, key=lambda b: _natural_bin_id_key(b.bin_id))
+    coords: List[Tuple[float, float]] = [(depot_lat, depot_lon)]
+    coords.extend((b.latitude, b.longitude) for b in ordered)
+    matrix = _build_distance_matrix(coords)
+    return naive_loop_driving_km(matrix)
+
+
 def compute_route(
     db: Session,
     threshold: float = ALERT_THRESHOLD,
     traffic_zones: Optional[List[Dict[str, Any]]] = None,
     traffic_mode: str = "penalize",
+    use_spillover_prediction: bool = False,
 ) -> RouteResponse:
     """
     High-level entry point: fetch priority bins → optimise → return RouteResponse.
 
     Savings comparison:
-      - Unoptimized baseline: visit ALL city bins sequentially (naive approach)
-      - Optimized result:     visit only critical (above threshold) bins via TSP
+      - baseline_distance_km: fixed static driving tour visiting ALL bins (sorted id)
+      - optimized: TSP on priority bins only
     """
     from route_optimizer import _haversine_km
 
@@ -135,8 +156,12 @@ def compute_route(
             )
     unoptimized_km = round(unoptimized_km, 3)
 
+    static_baseline_km = static_full_city_driving_km(depot_lat, depot_lon, all_bins)
+
     # Critical bins only (above threshold with GPS)
-    priority_bins_raw = get_priority_bins(db, threshold)
+    priority_bins_raw = get_priority_bins(
+        db, threshold, use_spillover_prediction=use_spillover_prediction
+    )
     priority_bins = [b for b in priority_bins_raw if b.bin_id != "DEPOT_00"]
 
     if not priority_bins:
@@ -147,6 +172,7 @@ def compute_route(
             distances=[],
             optimized_distance_km=0.0,
             unoptimized_distance_km=unoptimized_km,
+            baseline_distance_km=static_baseline_km,
         )
 
     # Start with Depot
@@ -157,11 +183,14 @@ def compute_route(
     bin_ids.extend([b.bin_id for b in priority_bins])
     coords.extend([(b.latitude, b.longitude) for b in priority_bins])
 
+    base_matrix = _build_distance_matrix(coords)
+
     ordered_ids, leg_distances = optimize_route(
         bin_ids,
         coords,
         traffic_zones=traffic_zones,
         traffic_mode=traffic_mode,
+        base_matrix=base_matrix,
     )
 
     # Optimized: sum of OR-Tools leg distances
@@ -177,6 +206,7 @@ def compute_route(
         distances=leg_distances,
         optimized_distance_km=optimized_km,
         unoptimized_distance_km=unoptimized_km,
+        baseline_distance_km=static_baseline_km,
     )
     print(f"[Route] Optimized Path: {' -> '.join(result.route)}")
     return result

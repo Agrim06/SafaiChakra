@@ -28,6 +28,11 @@ def optimize_route_get(
         le=100,
         description="Override default fill-level threshold (%). Defaults to ALERT_THRESHOLD env var.",
     ),
+    use_spillover_prediction: bool = Query(
+        default=False,
+        alias="useSpilloverPrediction",
+        description="Include high spillover-risk bins below threshold (same as POST flag).",
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -38,7 +43,11 @@ def optimize_route_get(
     3. Returns the optimal visit order and leg distances.
     """
     effective_threshold = threshold if threshold is not None else ALERT_THRESHOLD
-    return route_service.compute_route(db, threshold=effective_threshold)
+    return route_service.compute_route(
+        db,
+        threshold=effective_threshold,
+        use_spillover_prediction=use_spillover_prediction,
+    )
 
 
 @router.post("/optimize-route", response_model=RouteResponse)
@@ -57,4 +66,5 @@ def optimize_route_post(
         threshold=effective_threshold,
         traffic_zones=zones,
         traffic_mode=payload.traffic_mode,
+        use_spillover_prediction=payload.use_spillover_prediction,
     )

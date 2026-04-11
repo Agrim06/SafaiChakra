@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   MapContainer,
@@ -10,7 +10,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Maximize2, X, Navigation, LocateFixed } from "lucide-react";
+import { Maximize2, X, Navigation, LocateFixed, Brush } from "lucide-react";
 
 // Fix for default Leaflet icon paths in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -139,35 +139,51 @@ function resampleLatLngPath(points, maxPoints) {
   return out;
 }
 
-/** Driving geometry through [lat,lng] waypoints; chain legs if one request fails. */
+/** Merge GeoJSON coordinate rings into one [lat,lng] path (drops duplicate joint). */
+function mergeGeoPaths(accum, chunk) {
+  if (!chunk?.length) return accum;
+  if (!accum.length) return chunk.slice();
+  return accum.concat(chunk.slice(1));
+}
+
+/**
+ * Driving geometry through [lat,lng] waypoints.
+ * Uses per-leg OSRM requests when there are many stops so URLs stay within limits and
+ * multi-via routes do not fail silently (which left the map on straight chords).
+ */
 async function osrmRoadThrough(waypointsLatLng) {
   if (!waypointsLatLng || waypointsLatLng.length < 2) return null;
-  const qs = new URLSearchParams({ overview: "full", geometries: "geojson", steps: "false" });
+  const qs = new URLSearchParams({ overview: "simplified", geometries: "geojson", steps: "false" });
   const q = qs.toString();
-  const path = waypointsLatLng.map(([lat, lng]) => `${lng},${lat}`).join(";");
-  try {
-    const res = await fetch(`${OSRM}/route/v1/driving/${path}?${q}`);
+
+  async function fetchLeg(from, to) {
+    const url = `${OSRM}/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?${q}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
     const data = await res.json();
-    if (data.code === "Ok" && data.routes?.[0]?.geometry?.coordinates?.length) {
-      return data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
-    }
-  } catch {
-    /* fall through */
+    if (data.code !== "Ok" || !data.routes?.[0]?.geometry?.coordinates?.length) return null;
+    return data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
   }
-  const merged = [];
-  for (let i = 0; i < waypointsLatLng.length - 1; i += 1) {
-    const a = waypointsLatLng[i];
-    const b = waypointsLatLng[i + 1];
+
+  const MAX_VIA = 22;
+  if (waypointsLatLng.length <= MAX_VIA) {
+    const path = waypointsLatLng.map(([lat, lng]) => `${lng},${lat}`).join(";");
     try {
-      const res = await fetch(`${OSRM}/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}?${q}`);
+      const res = await fetch(`${OSRM}/route/v1/driving/${path}?${q}`);
       const data = await res.json();
-      if (data.code !== "Ok" || !data.routes?.[0]?.geometry?.coordinates) continue;
-      const g = data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
-      if (!merged.length) merged.push(...g);
-      else merged.push(...g.slice(1));
+      if (data.code === "Ok" && data.routes?.[0]?.geometry?.coordinates?.length) {
+        return data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
+      }
     } catch {
-      /* skip leg */
+      /* fall through to legs */
     }
+  }
+
+  let merged = [];
+  for (let i = 0; i < waypointsLatLng.length - 1; i += 1) {
+    const g = await fetchLeg(waypointsLatLng[i], waypointsLatLng[i + 1]);
+    if (!g) return merged.length >= 2 ? merged : null;
+    merged = mergeGeoPaths(merged, g);
   }
   return merged.length >= 2 ? merged : null;
 }
@@ -558,6 +574,7 @@ export default function MapView({
   predictiveData,
   trafficStrokes = [],
   drawTrafficEnabled = false,
+  onToggleDrawTraffic = () => {},
   onAddTrafficStroke,
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -566,7 +583,14 @@ export default function MapView({
   const [isLight, setIsLight] = useState(document.documentElement.getAttribute("data-theme") === "light");
 
   const locations = buildLocations(statuses);
-  const routeSignature = route?.join("-") || "none";
+
+  const routeGeometryKey = useMemo(() => {
+    if (!route?.length) return "";
+    const locs = buildLocations(statuses);
+    const coords = route.map((id) => locs[id]).filter(Boolean);
+    if (coords.length < 2) return "";
+    return `${route.join("-")}|${coords.map(([lat, lng]) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(";")}`;
+  }, [route, statuses]);
 
   const handleStroke = useCallback(
     (positions) => {
@@ -585,22 +609,27 @@ export default function MapView({
   }, []);
 
   useEffect(() => {
-    if (!route || route.length < 2) {
+    if (!routeGeometryKey || !route?.length) {
       setRoadPath(null);
       return;
     }
-    const coords = route.map((id) => locations[id]).filter(Boolean);
+    const locs = buildLocations(statuses);
+    const coords = route.map((id) => locs[id]).filter(Boolean);
     if (coords.length < 2) return;
 
-    setRoadPath(coords);
     let cancelled = false;
-    osrmRoadThrough(coords).then((path) => {
-      if (!cancelled && path?.length >= 2) setRoadPath(path);
-    });
+    (async () => {
+      const path = await osrmRoadThrough(coords);
+      if (cancelled) return;
+      if (path?.length >= 2) setRoadPath(path);
+      else setRoadPath(coords);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [routeSignature, JSON.stringify(locations)]);
+    // Intentionally only routeGeometryKey: refetch OSRM when stop order or bin coords change, not on unrelated status polls.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable fingerprint encodes route + coordinates
+  }, [routeGeometryKey]);
 
   const displayPath = roadPath || (route?.map(id => locations[id]).filter(Boolean) || []);
 
@@ -625,6 +654,23 @@ export default function MapView({
             Pathing...
           </span>
         )}
+
+        <button
+          type="button"
+          onClick={onToggleDrawTraffic}
+          className={`p-1.5 rounded-md transition-all border border-transparent group flex items-center gap-2 pr-3 ${
+            drawTrafficEnabled
+              ? "bg-red-500/10 text-red-400 hover:bg-red-500/15"
+              : "hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--color-text)]"
+          }`}
+          title={drawTrafficEnabled ? "Stop drawing traffic" : "Draw traffic on map"}
+        >
+          <Brush size={16} className="group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">
+            Draw traffic
+            {drawTrafficEnabled ? " · On" : ""}
+          </span>
+        </button>
 
         <button
           onClick={() => setRecenterCount(v => v + 1)}

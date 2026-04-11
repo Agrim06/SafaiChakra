@@ -33,8 +33,6 @@ export default function App() {
 
   const [trafficStrokes, setTrafficStrokes] = useState([]);
   const [drawTrafficEnabled, setDrawTrafficEnabled] = useState(false);
-  const [trafficStrictAvoid, setTrafficStrictAvoid] = useState(false);
-
   // 1. Fetch all known bins
   const fetchAllBins = useCallback(async () => {
     try {
@@ -107,10 +105,12 @@ export default function App() {
           });
         }
       }
+      const useSpilloverPrediction = Boolean(showPredictiveMap && predictiveData?.length);
       const { data } = await axios.post(`${API_BASE}/optimize-route`, {
         threshold,
         trafficZones,
-        trafficMode: trafficStrictAvoid ? "avoid" : "penalize",
+        trafficMode: "penalize",
+        useSpilloverPrediction,
       });
       setRouteData(data);
       setError(null);
@@ -119,7 +119,7 @@ export default function App() {
     } finally {
       setOptimizing(false);
     }
-  }, [threshold, trafficStrokes, trafficStrictAvoid]);
+  }, [threshold, trafficStrokes, showPredictiveMap, predictiveData]);
 
   const handleSimulateAlert = async () => {
     if (!activeBin) return;
@@ -231,12 +231,8 @@ export default function App() {
               activeBin={activeBin}
               setActiveBin={setActiveBin}
               statuses={statuses}
-              drawTrafficEnabled={drawTrafficEnabled}
-              onToggleDrawTraffic={() => setDrawTrafficEnabled((v) => !v)}
               trafficStrokeCount={trafficStrokes.length}
               onClearTraffic={() => setTrafficStrokes([])}
-              trafficStrictAvoid={trafficStrictAvoid}
-              onTrafficStrictAvoidChange={setTrafficStrictAvoid}
             />
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
 
@@ -259,6 +255,7 @@ export default function App() {
                 predictiveData={predictiveData}
                 trafficStrokes={trafficStrokes}
                 drawTrafficEnabled={drawTrafficEnabled}
+                onToggleDrawTraffic={() => setDrawTrafficEnabled((v) => !v)}
                 onAddTrafficStroke={addTrafficStroke}
               />
             </div>
