@@ -16,20 +16,20 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
   const stops = useMemo(() => route ? route.filter(b => b !== "DEPOT_00") : [], [route]);
 
   return (
-    <div className="glass-panel p-5 pb-14 slide-in flex flex-col gap-10 border-[var(--color-card-border)] relative overflow-hidden">
+    <div className="glass-panel p-4 pb-12 slide-in flex flex-col gap-6 border-[var(--color-card-border)] relative overflow-hidden">
       
       {/* ── Header ── */}
       <div className="flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[var(--color-purple)]/10 border border-[var(--color-purple)]/20 flex items-center justify-center">
-            <Cpu size={18} className="text-[var(--color-purple)]" />
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-[var(--color-purple)]/10 border border-[var(--color-purple)]/20 flex items-center justify-center">
+            <Cpu size={14} className="text-[var(--color-purple)]" />
           </div>
           <div>
-            <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-text)] leading-none">Route Intelligence</h3>
-            <p className="text-[10px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter mt-1">Automated Pipeline</p>
+            <h3 className="text-[12.5px] font-black uppercase tracking-widest text-[var(--color-text)] leading-none">Intelligence</h3>
+            <p className="text-[8.5px] font-bold text-[var(--color-text-dim)] uppercase tracking-tight mt-0.5">Automated Pipeline</p>
           </div>
         </div>
-        <div className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest border transition-colors ${
+        <div className={`text-[8.5px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border transition-colors ${
           optimizing ? 'bg-[var(--color-purple)]/10 border-[var(--color-purple)]/30 text-[var(--color-purple)]' :
           hasRoute ? 'bg-[var(--color-green)]/10 border-[var(--color-green)]/30 text-[var(--color-green)]' :
           'bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)]'
@@ -38,7 +38,6 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
         </div>
       </div>
 
-      {/* ── Progress Pipeline ── */}
       <div className="relative flex items-center justify-between w-full px-4">
         {/* Background Track */}
         <div className="absolute top-1/2 left-4 right-4 h-[2px] bg-[var(--color-card-border)] -translate-y-1/2 z-0 opacity-50"></div>
@@ -58,27 +57,27 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
             <div key={step.id} className="relative z-10 flex flex-col items-center">
               {/* Node Circle */}
               <div 
-                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 shadow-sm ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500 shadow-sm ${
                   isDone ? 'bg-[var(--color-green)] border-[var(--color-green)]' : 
                   isActive ? 'bg-[var(--color-surface)] border-[var(--color-purple)]' : 
                   'bg-[var(--color-bg)] border-[var(--color-card-border)]'
                 }`}
               >
                 {isDone ? (
-                  <CheckCircle2 size={18} className="text-[var(--color-bg)]" strokeWidth={3} />
+                  <CheckCircle2 size={14} className="text-[var(--color-bg)]" strokeWidth={3} />
                 ) : isActive && optimizing && i === 2 ? (
-                  <Loader2 size={18} className="text-[var(--color-purple)] animate-spin" />
+                  <Loader2 size={14} className="text-[var(--color-purple)] animate-spin" />
                 ) : (
-                  <Icon size={16} className={isActive ? 'text-[var(--color-purple)]' : 'text-[var(--color-text-dim)]'} />
+                  <Icon size={13} className={isActive ? 'text-[var(--color-purple)]' : 'text-[var(--color-text-dim)]'} />
                 )}
               </div>
 
               {/* Step Labels */}
-              <div className="absolute top-14 flex flex-col items-center text-center w-32">
-                <span className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${isActive ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>
+              <div className="absolute top-10 flex flex-col items-center text-center w-24">
+                <span className={`text-[8.5px] font-black uppercase tracking-widest mb-0.5 ${isActive ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>
                   {step.label}
                 </span>
-                <span className="text-[9px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter opacity-80">
+                <span className="text-[7.5px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter opacity-80">
                   {step.desc}
                 </span>
               </div>
@@ -89,24 +88,24 @@ export default function RouteIntelPanel({ route, optimizing, status }) {
 
       {/* ── Dispatch Result chips ── */}
       {hasRoute && !optimizing && (
-        <div className="mt-4 bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-2 shadow-inner">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Target Sequence</p>
-            <span className="text-[10px] font-black text-[var(--color-purple)] bg-[var(--color-purple)]/10 px-2.5 py-1 rounded-lg border border-[var(--color-purple)]/20 uppercase tracking-tight">
+        <div className="mt-2 bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-xl p-3 animate-in fade-in slide-in-from-bottom-2 shadow-inner">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Target Sequence</p>
+            <span className="text-[9px] font-black text-[var(--color-purple)] bg-[var(--color-purple)]/10 px-2 py-0.5 rounded-lg border border-[var(--color-purple)]/20 uppercase tracking-tight">
               {stops.length} Nodes
             </span>
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-1.5 items-center">
             {route.map((bin, i) => (
               <div key={i} className="flex items-center gap-1.5">
-                <span className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black uppercase border-2 transition-all shadow-sm ${
+                <span className={`px-2 py-1 rounded-lg text-[9.5px] font-black uppercase border transition-all shadow-sm ${
                   bin === "DEPOT_00" 
                   ? 'bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/30 text-[var(--color-cyan)]' 
                   : 'bg-[var(--color-surface)] border-[var(--color-card-border)] text-[var(--color-text)]'
                 }`}>
                   {bin === "DEPOT_00" ? "HUB" : bin.replace("BIN_", "")}
                 </span>
-                {i < route.length - 1 && <ArrowRight size={12} className="text-[var(--color-text-dim)] opacity-40" />}
+                {i < route.length - 1 && <ArrowRight size={10} className="text-[var(--color-text-dim)] opacity-40" />}
               </div>
             ))}
           </div>

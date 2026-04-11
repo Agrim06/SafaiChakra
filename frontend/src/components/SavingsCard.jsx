@@ -42,21 +42,18 @@ function calcSavings(routeData) {
 function Metric({ icon: Icon, label, value, unit, color, delay = 0 }) {
   return (
     <div
-      className="bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] rounded-2xl p-3 flex flex-col gap-2 slide-in shadow-sm hover:border-[var(--color-text-dim)]/30 transition-all"
+      className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-xl px-3.5 py-2.5 flex items-center gap-3.5 slide-in shadow-sm hover:border-[var(--color-text-dim)]/30 transition-all"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-center justify-between">
-        <div className="w-7 h-7 rounded-lg bg-[var(--color-surface)] border border-[var(--color-card-border)] flex items-center justify-center shadow-inner">
-          <Icon size={12} style={{ color: `var(${color})` }} />
-        </div>
-        <span className="text-[7.5px] font-black tracking-[0.2em] uppercase text-[var(--color-text-dim)] opacity-60">Resolved</span>
+      <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-card-border)] flex items-center justify-center shrink-0">
+        <Icon size={14} style={{ color: `var(${color})` }} />
       </div>
       <div>
-        <p className="text-xl font-black tracking-tighter tabular-nums mb-0.5 text-[var(--color-text)]">
-          {value}
-          <span className="text-[9px] font-bold text-[var(--color-text-dim)] ml-1 uppercase">{unit}</span>
-        </p>
-        <p className="text-[8.5px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">{label}</p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-[17px] font-black tracking-tight tabular-nums text-[var(--color-text)] leading-none">{value}</span>
+          <span className="text-[10px] font-bold text-[var(--color-text-dim)] uppercase">{unit}</span>
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-muted)] mt-1 leading-none">{label}</p>
       </div>
     </div>
   );
@@ -80,9 +77,9 @@ export default function SavingsCard({ routeData }) {
           </div>
         </div>
         <div className="hidden md:flex items-center gap-2 opacity-20">
-           {[...Array(3)].map((_, i) => (
-             <div key={i} className="w-24 h-8 rounded-lg bg-[var(--color-card-border)]" />
-           ))}
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="w-24 h-8 rounded-lg bg-[var(--color-card-border)]" />
+          ))}
         </div>
       </div>
     );
@@ -90,68 +87,58 @@ export default function SavingsCard({ routeData }) {
 
   return (
     <div className="glass-panel p-4 slide-in border-[var(--color-card-border)] relative overflow-hidden">
-      {/* Background Accent - Soft glow based on performance */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-green)]/[0.03] blur-[100px] pointer-events-none" />
+      {/* Background Accent */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-green)]/[0.02] blur-[60px] pointer-events-none" />
 
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-[38px] h-[38px] rounded-2xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] flex items-center justify-center shadow-sm">
+      {/* Header & Stats Row */}
+      <div className="flex flex-col sm:flex-row items-center gap-5 mb-4 relative z-10">
+        <div className="flex items-center gap-3.5 min-w-[170px]">
+          <div className="w-[38px] h-[38px] rounded-lg bg-[var(--color-bg)] border border-[var(--color-card-border)] flex items-center justify-center shadow-sm">
             <TrendingDown size={18} className="text-[var(--color-green)]" />
           </div>
-          <div>
-            <p className="text-[9px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-0.5">Fleet Performance</p>
-            <p className="text-lg font-black text-[var(--color-text)] leading-none tracking-tight">Efficiency Savings</p>
-          </div>
+          <p className="text-[15px] font-black text-[var(--color-text)] tracking-tight">Efficiency Savings</p>
         </div>
 
-        {/* Distance comparison Readout */}
-        <div className="flex items-center gap-2 flex-wrap bg-[var(--color-bg)] p-1.5 rounded-xl border-2 border-[var(--color-card-border)] shadow-inner">
-          <div className="px-3 py-2 flex flex-col">
-            <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase mb-0.5 tracking-tighter">Raw Path</span>
-            <span className="text-[12px] font-black tabular-nums text-[var(--color-text-muted)]">{s.eff_unopt} km</span>
+        <div className="flex-1 flex items-center gap-3 bg-[var(--color-bg)] p-2 rounded-lg border border-[var(--color-card-border)]">
+          <div className="px-3 py-1 flex items-baseline gap-2">
+             <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-widest">Base</span>
+             <span className="text-[13px] font-black tabular-nums text-[var(--color-text-muted)]">{s.eff_unopt}km</span>
           </div>
           <ArrowRight size={14} className="text-[var(--color-card-border)]" />
-          <div className="px-3 py-2 flex flex-col bg-[var(--color-green)]/10 border border-[var(--color-green)]/20 rounded-lg">
-            <span className="text-[9px] font-black text-[var(--color-green)] uppercase mb-0.5 tracking-tighter">Optimized</span>
-            <span className="text-[12px] font-black tabular-nums text-[var(--color-text)]">{s.eff_opt} km</span>
+          <div className="px-3 py-1 flex items-baseline gap-2 bg-[var(--color-green)]/5 rounded-md">
+             <span className="text-[10px] font-black text-[var(--color-text-green)] uppercase tracking-widest">Opt</span>
+             <span className="text-[13px] font-black tabular-nums text-[var(--color-text)]">{s.eff_opt}km</span>
           </div>
-          <div className="px-4 py-2 flex flex-col bg-[var(--color-surface)] border border-[var(--color-card-border)] rounded-lg shadow-sm">
-            <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase mb-0.5 tracking-tighter">Net Gain</span>
-            <span className="text-[12px] font-black text-[var(--color-green)]">₹{s.costSaved}</span>
+          <div className="ml-auto px-5 py-2 bg-[var(--color-surface)] border border-[var(--color-card-border)] rounded-md">
+             <span className="text-[13px] font-black text-[var(--color-green)] tracking-tight">₹{s.costSaved} Saved</span>
           </div>
         </div>
       </div>
 
-      {/* Metrics grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4 relative z-10">
-        <Metric icon={Clock} label="Operational Time" value={s.timeSaved} unit="min" color="--color-cyan" delay={0} />
-        <Metric icon={Fuel} label="Substrate Fuel" value={s.fuelSaved} unit="L" color="--color-amber" delay={60} />
-        <Metric icon={Leaf} label="CO₂ Mitigation" value={s.co2Saved} unit="kg" color="--color-green" delay={120} />
-        <Metric icon={TrendingDown} label="Grid Distance" value={s.eff_saved} unit="km" color="--color-purple" delay={180} />
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4 relative z-10">
+        <Metric icon={Clock} label="Operational" value={s.timeSaved} unit="mins" color="--color-cyan" delay={0} />
+        <Metric icon={Fuel} label="Fuel Saved" value={s.fuelSaved} unit="L" color="--color-amber" delay={60} />
+        <Metric icon={Leaf} label="CO₂" value={s.co2Saved} unit="kg" color="--color-green" delay={120} />
+        <Metric icon={TrendingDown} label="Net Dist" value={s.eff_saved} unit="km" color="--color-purple" delay={180} />
       </div>
 
-      {/* Efficiency progress bar */}
-      <div className="bg-[var(--color-bg)] p-3.5 rounded-2xl border-2 border-[var(--color-card-border)] relative overflow-hidden shadow-inner">
-        <div className="flex justify-between items-end mb-3 relative z-10">
-          <div className="flex flex-col">
-             <span className="text-[9px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-1">Route Efficiency Delta</span>
-             <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-80">Real-time OR-Tools solver active</span>
-          </div>
-          <div className="text-right">
-             <span className="text-xl font-black text-[var(--color-green)] tracking-tighter tabular-nums">{s.pct}%</span>
-          </div>
+      {/* Global Efficiency Belt */}
+      <div className="bg-[var(--color-bg)] px-5 py-2.5 rounded-xl border border-[var(--color-card-border)] flex items-center gap-6 shadow-inner">
+        <div className="flex items-center gap-3 min-w-[130px]">
+           <span className="text-[18px] font-black text-[var(--color-green)] tabular-nums">{s.pct}%</span>
+           <span className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-widest leading-none">Efficiency<br/>Gain</span>
         </div>
-        <div className="h-2 w-full bg-[var(--color-surface)] rounded-full overflow-hidden border border-[var(--color-card-border)] shadow-inner">
+        <div className="flex-1 h-2.5 bg-[var(--color-surface)] rounded-full overflow-hidden border border-[var(--color-card-border)]">
           <div 
-            className="h-full bg-gradient-to-r from-[var(--color-green)] to-[var(--color-green)] opacity-90 shadow-[2px_0_8px_rgba(0,0,0,0.05)] transition-all duration-1000 ease-out"
+            className="h-full bg-[var(--color-green)] opacity-80 shadow-[0_0_10px_var(--color-green)] transition-all duration-1000 ease-out"
             style={{ width: `${Math.min(100, parseFloat(s.pct))}%` }} 
           />
         </div>
-        <p className="text-[8.5px] font-black text-[var(--color-text-dim)] mt-3 uppercase tracking-[0.2em] flex items-center gap-2 opacity-70">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-green)] shadow-sm" />
-          Engine: {s.hasRealDistances ? "Synchronized GPS Matrix" : "Synthetic Estimation Mode"}
-        </p>
+        <div className="hidden sm:flex items-center gap-2.5 text-[9px] font-bold text-[var(--color-text-dim)] uppercase tracking-tighter">
+           <div className="w-2 h-2 rounded-full bg-[var(--color-green)] animate-pulse" />
+           {s.hasRealDistances ? "GPS Active" : "Synthetic"}
+        </div>
       </div>
     </div>
   );
