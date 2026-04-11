@@ -39,7 +39,7 @@ export default function Navbar({ lastUpdated, isLive }) {
               <span className="text-[22px] font-black tracking-tight text-[var(--color-green)]">Chakra</span>
             </div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-text-dim)] mt-0.5">
-              Operations Center V2.0
+              Operations Center V2.6
             </p>
           </div>
         </div>

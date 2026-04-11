@@ -64,7 +64,7 @@ export default function App() {
       setStatuses(statusMap);
       setIsLive(true);
       setError(null);
-      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
       if (!axios.isCancel(err)) setIsLive(false);
     } finally {
