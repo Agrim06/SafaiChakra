@@ -101,16 +101,23 @@ def static_full_city_driving_km(
     depot_lon: float,
     all_bins: List[models.BinReading],
 ) -> float:
-    """Fixed municipal schedule: depot → every non-depot bin (stable bin_id order) → depot, road distances."""
+    """Fixed municipal schedule: realistically efficient route visiting every non-depot bin."""
     if not all_bins:
         return 0.0
-    # Replace random ID-based traversal with a more "human-likely" Sweep Sort (North-to-South).
-    # Alphabetical traversal is a "worst-case" that makes savings look impossibly high.
-    ordered = sorted(all_bins, key=lambda b: (b.latitude, b.longitude), reverse=True)
-    coords: List[Tuple[float, float]] = [(depot_lat, depot_lon)]
-    coords.extend((b.latitude, b.longitude) for b in ordered)
-    matrix = _build_distance_matrix(coords)
-    return naive_loop_driving_km(matrix)
+    bin_ids = ["DEPOT_00"]
+    coords = [(depot_lat, depot_lon)]
+    
+    for b in all_bins:
+        bin_ids.append(b.bin_id)
+        coords.append((b.latitude, b.longitude))
+        
+    _, leg_distances = optimize_route(
+        bin_ids,
+        coords,
+        time_limit_seconds=1,
+    )
+    
+    return round(sum(leg_distances), 3)
 
 
 def compute_route(

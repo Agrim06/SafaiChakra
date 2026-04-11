@@ -20,55 +20,92 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
 });
 
-/* ── Custom Icons ── */
-const makeIcon = (color, pulse = false) =>
-  L.divIcon({
-    className: "custom-div-icon",
-    html: `
-      <div style="position:relative;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
-        ${pulse ? `<div style="position:absolute;inset:-6px;border-radius:3px;transform:rotate(45deg);background:${color};opacity:0.3;animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : ""}
-        <div style="width:20px;height:20px;transform:rotate(45deg);border:1.5px solid rgba(255,255,255,0.6);border-radius:3px;background:${color};box-shadow:0 0 14px ${color}AA;"></div>
-        <div style="position:absolute;width:6px;height:6px;background:white;border-radius:50%;opacity:0.9;"></div>
-      </div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-  });
-
-const makeDepotIcon = () =>
-  L.divIcon({
-    className: "custom-div-icon",
-    html: `
-      <div style="position:relative;width:24px;height:24px;">
-        <div style="position:absolute;inset:-3px;border-radius:6px;transform:rotate(45deg);background:rgba(0,219,233,0.15);animation:pulse 2s infinite;"></div>
-        <div style="width:24px;height:24px;background:var(--color-surface);border:1.5px solid #00dbe9;transform:rotate(45deg);border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(0,219,233,0.3);">
-          <div style="transform:rotate(-45deg);font-size:12px;">🏭</div>
-        </div>
-      </div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-  });
-
+// 🚛 Truck Icon
 const makeTruckIcon = () =>
   L.divIcon({
-    className: "custom-div-icon",
-    html: `
-      <div style="filter:drop-shadow(0 0 10px rgba(57,255,20,0.4));">
-        <div style="font-size:24px;animation:bounce 1.5s infinite;">🚛</div>
-      </div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `<div style="font-size:20px;">🚛</div>`,
+    className: "",
+    iconSize: [30, 30],
   });
 
+// 🏭 Depot Icon
+const makeDepotIcon = () =>
+  L.divIcon({
+    html: `<div style="font-size:22px;">🏭</div>`,
+    className: "",
+    iconSize: [30, 30],
+  });
+
+// 📍 Locations builder
 function buildLocations(statuses) {
-  const locs = {};
-  if (!statuses) return locs;
-  Object.values(statuses).forEach((s) => {
-    if (s?.latitude != null && s?.longitude != null) {
-      locs[s.bin_id] = [s.latitude, s.longitude];
+  const map = {};
+  Object.values(statuses || {}).forEach((s) => {
+    if (s.latitude && s.longitude) {
+      map[s.bin_id] = [s.latitude, s.longitude];
     }
   });
-  return locs;
+  return map;
 }
+
+/* ── Custom Icons ── */
+// 🔥 ADD THIS NEW PIN ICON (replace makeIcon completely)
+
+const makePinIcon = (status, threshold) => {
+  const pct = status.fill_pct ?? 0;
+  const isCritical = status.is_alert || pct >= threshold;
+  const isWarning = pct >= threshold - 30;
+
+  const color = isCritical
+    ? "var(--color-red)"
+    : isWarning
+      ? "#eab308"
+      : "var(--color-green)";
+
+  const label = status.bin_id === "DEPOT_00" ? "HUB" : status.bin_id;
+
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        
+        <!-- 🔴 HEAD -->
+        <div style="
+          width:16px;
+          height:16px;
+          border-radius:50%;
+          background:${color};
+          box-shadow:0 0 10px ${color}AA;
+          border:2px solid white;
+          position:relative;
+          z-index:2;
+        ">
+          ${isCritical
+        ? `<div style="
+                  position:absolute;
+                  inset:-6px;
+                  border-radius:50%;
+                  background:${color};
+                  opacity:0.3;
+                  animation:ping 1.5s infinite;
+                "></div>`
+        : ""
+      }
+        </div>
+
+      <!-- 🔻 NEEDLE PIN -->
+      <div style="
+        width:2px;
+        height:14px;
+        background:${color};
+        margin-top:-2px;
+        border-radius:2px;
+      "></div>
+      </div>
+    `,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+};
 
 const OSRM = "https://router.project-osrm.org";
 
@@ -428,37 +465,66 @@ function MapCanvas({
 
         {Object.values(statuses || {}).map((s) => {
           if (!s?.latitude || !s?.longitude) return null;
-          const isDepot = s.bin_id === "DEPOT_00";
-          const pct = s.fill_pct ?? 0;
-          const isCritical = s.is_alert || pct >= threshold;
-          const isWarning = pct >= threshold - 30;
 
-          // Use dynamic CSS variables for colors
-          const color = isDepot
-            ? "var(--color-cyan)"
-            : isCritical ? "var(--color-red)"
-              : isWarning ? "#eab308"
-                : "var(--color-green)";
+          const isDepot = s.bin_id === "DEPOT_00";
 
           return (
-            <Marker key={s.bin_id} position={[s.latitude, s.longitude]} icon={isDepot ? makeDepotIcon() : makeIcon(color, isCritical)}>
-              <Popup className="custom-popup">
-                <div className="relative w-full h-full flex flex-col items-center justify-center">
-                  {!isDepot && (
-                    <div
-                      className="kinetic-ring"
-                      style={{ '--ring-gradient': `conic-gradient(${color} ${pct}%, transparent 0%)` }}
-                    />
-                  )}
-                  <span className="kinetic-id">{isDepot ? "Main HUB" : `BIN _0${parseInt(s.bin_id.replace("BIN_", ""), 10)}`}</span>
-                  {!isDepot ? (
-                    <div className="flex flex-col items-center mt-1">
-                      <span className="kinetic-value" style={{ fontSize: '10px', lineHeight: '1.2' }}>Fill: {pct.toFixed(0)}%</span>
-                      <span className="kinetic-value" style={{ fontSize: '10px', lineHeight: '1.2' }}>Risk: {s.spillover_risk ?? 0}%</span>
+            <Marker
+              key={s.bin_id}
+              position={[s.latitude, s.longitude]}
+              icon={isDepot ? makeDepotIcon() : makePinIcon(s, threshold)}
+            >
+              <Popup
+                offset={[20, -40]}   // 👉 pushes it to the right of pin
+                closeButton={false}
+                className="tablet-popup"
+              >
+                <div className="tablet-card">
+                  <div className="tablet-id">{s.bin_id}</div>
+
+                  {/* Fill */}
+                  <div className="tablet-block">
+                    <div className="tablet-row">
+                      <span>Fill</span>
+                      <span>{(s.fill_pct ?? 0).toFixed(0)}%</span>
                     </div>
-                  ) : (
-                    <span className="kinetic-value">Dumpyard</span>
-                  )}
+                    <div className="tablet-bar">
+                      <div
+                        className="tablet-fill"
+                        style={{
+                          width: `${s.fill_pct ?? 0}%`,
+                          background:
+                            (s.fill_pct ?? 0) > 80
+                              ? "#ef4444"
+                              : (s.fill_pct ?? 0) > 50
+                                ? "#eab308"
+                                : "#22c55e",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Risk */}
+                  <div className="tablet-block">
+                    <div className="tablet-row">
+                      <span>Risk</span>
+                      <span>{s.spillover_risk ?? 0}%</span>
+                    </div>
+                    <div className="tablet-bar">
+                      <div
+                        className="tablet-fill"
+                        style={{
+                          width: `${s.spillover_risk ?? 0}%`,
+                          background:
+                            (s.spillover_risk ?? 0) > 80
+                              ? "#ef4444"
+                              : (s.spillover_risk ?? 0) > 50
+                                ? "#eab308"
+                                : "#22c55e",
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </Popup>
             </Marker>
