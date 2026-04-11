@@ -473,10 +473,16 @@ function MapCanvas({
               key={s.bin_id}
               position={[s.latitude, s.longitude]}
               icon={isDepot ? makeDepotIcon() : makePinIcon(s, threshold)}
+              eventHandlers={{
+                mouseover: (e) => e.target.openPopup(),
+                mouseout: (e) => e.target.closePopup(),
+              }}
             >
               <Popup
-                offset={[20, -40]}   // 👉 pushes it to the right of pin
+                autoClose={false}
+                closeOnClick={false}
                 closeButton={false}
+                offset={[20, -40]}
                 className="tablet-popup"
               >
                 <div className="tablet-card">
@@ -556,7 +562,7 @@ export default function MapView({
   predictiveData,
   trafficStrokes = [],
   drawTrafficEnabled = false,
-  onToggleDrawTraffic = () => {},
+  onToggleDrawTraffic = () => { },
   onAddTrafficStroke,
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -640,11 +646,10 @@ export default function MapView({
         <button
           type="button"
           onClick={onToggleDrawTraffic}
-          className={`p-1.5 rounded-md transition-all border border-transparent group flex items-center gap-2 pr-3 ${
-            drawTrafficEnabled
+          className={`p-1.5 rounded-md transition-all border border-transparent group flex items-center gap-2 pr-3 ${drawTrafficEnabled
               ? "bg-red-500/10 text-red-400 hover:bg-red-500/15"
               : "hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--color-text)]"
-          }`}
+            }`}
           title={drawTrafficEnabled ? "Stop drawing traffic" : "Draw traffic on map"}
         >
           <Brush size={16} className="group-hover:scale-110 transition-transform" />
