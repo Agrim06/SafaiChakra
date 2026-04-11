@@ -402,7 +402,8 @@ function MapCanvas({
                     style={{ '--ring-gradient': `conic-gradient(${color} ${p.spillover_risk}%, transparent 0%)` }}
                   />
                   <span className="kinetic-id">BIN_ {parseInt(p.bin_id.replace("BIN_", ""), 10)}</span>
-                  <span className="kinetic-value">{p.spillover_risk}%</span>
+                  <span className="kinetic-value" style={{ fontSize: '10px' }}>Fill: {p.fill_pct ? p.fill_pct.toFixed(0) : 0}%</span>
+                  <span className="kinetic-value" style={{ fontSize: '10px' }}>Risk: {p.spillover_risk}%</span>
                 </div>
               </Popup>
             </CircleMarker>
@@ -434,7 +435,14 @@ function MapCanvas({
                     />
                   )}
                   <span className="kinetic-id">{isDepot ? "Main HUB" : `BIN _0${parseInt(s.bin_id.replace("BIN_", ""), 10)}`}</span>
-                  <span className="kinetic-value">{isDepot ? "Dumpyard" : `${pct.toFixed(0)}%`}</span>
+                  {!isDepot ? (
+                    <div className="flex flex-col items-center mt-1">
+                      <span className="kinetic-value" style={{ fontSize: '10px', lineHeight: '1.2' }}>Fill: {pct.toFixed(0)}%</span>
+                      <span className="kinetic-value" style={{ fontSize: '10px', lineHeight: '1.2' }}>Risk: {s.spillover_risk ?? 0}%</span>
+                    </div>
+                  ) : (
+                    <span className="kinetic-value">Dumpyard</span>
+                  )}
                 </div>
               </Popup>
             </Marker>

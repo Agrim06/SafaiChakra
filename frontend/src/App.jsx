@@ -10,7 +10,7 @@ import AgentPanel from "./components/AgentPanel";
 import SavingsCard from "./components/SavingsCard";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS = 10000000;
+const POLL_MS = 300000
 
 export default function App() {
   const [allBins, setAllBins] = useState([]);
@@ -199,9 +199,9 @@ export default function App() {
                   <h3 className="text-xs font-black tracking-widest uppercase">Critical Overflow</h3>
                 </div>
                 <p className="text-[11px] mt-1 font-bold opacity-70">Node {activeBin} at {activeStatus.fill_pct.toFixed(0)}%</p>
-                <button 
-                  onClick={handleOptimize} 
-                  disabled={optimizing} 
+                <button
+                  onClick={handleOptimize}
+                  disabled={optimizing}
                   className="mt-3 w-full py-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
                 >
                   {optimizing ? <Loader2 className="animate-spin mx-auto" size={14} /> : "Dispatch Fleet →"}

@@ -52,6 +52,7 @@ def get_bin_status(bin_id: str, db: Session = Depends(get_db)):
         is_alert    = reading.is_alert,
         message     = "Collection needed!" if reading.is_alert else "All good.",
         created_at  = reading.created_at,
+        spillover_risk = bin_service.calculate_predictive_risk(reading.bin_id, reading.fill_pct),
     )
 
 

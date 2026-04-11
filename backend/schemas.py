@@ -35,6 +35,7 @@ class BinStatusResponse(BaseModel):
     is_alert:   bool
     message:    str
     created_at: datetime
+    spillover_risk: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
