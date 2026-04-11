@@ -99,29 +99,12 @@ export default function ControlPanel({
         >
           <span className={`text-[14px] ${showPredictiveMap ? 'animate-bounce' : ''}`}>⚡</span>
           <span className="text-[11.5px] font-bold uppercase tracking-[0.1em]">
-            {showPredictiveMap ? "Forecast Active" : "Predict Spillover"}
+            {showPredictiveMap ? "AI Active" : "Predict Spillover"}
           </span>
           {showPredictiveMap && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
         </button>
 
-        <div className="rounded-xl border-2 border-[var(--color-card-border)] bg-[var(--color-bg)] p-3 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between px-0.5">
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-dim)]">Traffic overlay</span>
-            {trafficStrokeCount > 0 && (
-              <span className="text-[9px] font-black tabular-nums text-[var(--color-text-muted)]">{trafficStrokeCount} stroke{trafficStrokeCount !== 1 ? "s" : ""}</span>
-            )}
-          </div>
-          {trafficStrokeCount > 0 && (
-            <button
-              type="button"
-              onClick={onClearTraffic}
-              className="active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-red-400 hover:border-red-500/30 text-[10px] font-black uppercase tracking-widest"
-            >
-              <Trash2 size={14} />
-              Clear traffic
-            </button>
-          )}
-        </div>
+      
       </div>
 
       {/* ── Threshold Slider Tile ── */}

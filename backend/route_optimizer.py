@@ -67,7 +67,7 @@ def _build_distance_matrix(coords: List[Tuple[float, float]]) -> List[List[int]]
     url = f"{OSRM_BASE}/table/v1/driving/{coord_string}?annotations=distance"
     
     try:
-        resp = requests.get(url, timeout=5)
+        resp = requests.get(url, timeout=10)
         data = resp.json()
         if data.get("code") == "Ok" and "distances" in data:
             matrix = []
@@ -275,7 +275,7 @@ def _osrm_driving_arc_hits_traffic(
         f"{lon1},{lat1};{lon2},{lat2}?overview=simplified&geometries=geojson&steps=false"
     )
     try:
-        r = _http_session().get(url, timeout=5)
+        r = _http_session().get(url, timeout=10)
         data = r.json()
         if data.get("code") != "Ok" or not data.get("routes"):
             return False

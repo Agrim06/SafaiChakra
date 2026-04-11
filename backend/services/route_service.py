@@ -104,7 +104,9 @@ def static_full_city_driving_km(
     """Fixed municipal schedule: depot → every non-depot bin (stable bin_id order) → depot, road distances."""
     if not all_bins:
         return 0.0
-    ordered = sorted(all_bins, key=lambda b: _natural_bin_id_key(b.bin_id))
+    # Replace random ID-based traversal with a more "human-likely" Sweep Sort (North-to-South).
+    # Alphabetical traversal is a "worst-case" that makes savings look impossibly high.
+    ordered = sorted(all_bins, key=lambda b: (b.latitude, b.longitude), reverse=True)
     coords: List[Tuple[float, float]] = [(depot_lat, depot_lon)]
     coords.extend((b.latitude, b.longitude) for b in ordered)
     matrix = _build_distance_matrix(coords)
@@ -133,30 +135,32 @@ def compute_route(
     depots = [b for b in all_bins_raw if b.bin_id == "DEPOT_00"]
     all_bins = [b for b in all_bins_raw if b.bin_id != "DEPOT_00"]
     
-    # Fallback to hardcoded Mysuru Dumpyard coordinates if Depot hasn't sent a reading
     if depots:
         depot_lat, depot_lon = depots[0].latitude, depots[0].longitude
     else:
-        # Default Depot (Mysuru Dumpyard area)
         depot_lat, depot_lon = 12.2764, 76.6666
-        print("[Route] Warning: DEPOT_00 not found in DB, using fallback coordinates.")
 
-    all_coords: List[Tuple[float, float]] = [(b.latitude, b.longitude) for b in all_bins]
-
-    unoptimized_km = 0.0
-    unopt_path = [(depot_lat, depot_lon)]
-    unopt_path.extend(all_coords)
-    unopt_path.append((depot_lat, depot_lon))
-
-    if len(unopt_path) > 1:
-        for i in range(len(unopt_path) - 1):
-            unoptimized_km += _haversine_km(
-                unopt_path[i][0], unopt_path[i][1],
-                unopt_path[i + 1][0], unopt_path[i + 1][1],
-            )
-    unoptimized_km = round(unoptimized_km, 3)
-
+    # ── 1. Full Scale Schedule (Baseline: Traditional way) ──
+    # Visiting EVERY bin in natural order using the SAME distance logic as optimized.
     static_baseline_km = static_full_city_driving_km(depot_lat, depot_lon, all_bins)
+
+    # ── 2. Filter Priority Bins ──
+    priority_bins_raw = get_priority_bins(
+        db, threshold, use_spillover_prediction=use_spillover_prediction
+    )
+    priority_bins = [b for b in priority_bins_raw if b.bin_id != "DEPOT_00"]
+
+    # ── 3. Naive Priority Path (For fairer comparison - same bins, bad order) ──
+    # If we only collected these bins but didn't optimize the path.
+    unoptimized_km = 0.0
+    if priority_bins:
+        # Use a "human-likely" sweep sort instead of alphabetical to get a realistic baseline
+        naive_ordered = sorted(priority_bins, key=lambda b: (b.latitude, b.longitude), reverse=True)
+        naive_coords = [(depot_lat, depot_lon)] + [(b.latitude, b.longitude) for b in naive_ordered]
+        naive_matrix = _build_distance_matrix(naive_coords)
+        unoptimized_km = naive_loop_driving_km(naive_matrix)
+    else:
+        unoptimized_km = static_baseline_km
 
     # Critical bins only (above threshold with GPS)
     priority_bins_raw = get_priority_bins(

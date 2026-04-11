@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine
 import models
-from seed_demo import seed_demo_bins_if_empty
 
 from routers.bin_router   import router as bin_router
 from routers.route_router import router as route_router
@@ -44,8 +43,6 @@ app.add_middleware(
 
 # ── Database bootstrap ───────────────────────────────────────────────────────
 models.Base.metadata.create_all(bind=engine)
-seed_demo_bins_if_empty()
-
 # ── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(bin_router)
 app.include_router(route_router)
