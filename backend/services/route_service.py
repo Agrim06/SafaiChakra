@@ -76,7 +76,7 @@ def get_priority_bins(
         # when the fleet is already active.
         if not is_priority and r.fill_pct >= 45:
             risk = calculate_predictive_risk(r.bin_id, r.fill_pct)
-            if risk >= 75
+            if risk >= 75:
                 is_priority = True
 
         if is_priority:
