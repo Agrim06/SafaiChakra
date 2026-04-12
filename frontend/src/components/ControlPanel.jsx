@@ -113,6 +113,16 @@ export default function ControlPanel({
           {showPredictiveMap && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
         </button>
 
+        {/* ── Sensor Management Actions ── */}
+        <button
+          onClick={onResetSensor}
+          className="flex items-center justify-center gap-2.5 py-3 rounded-xl bg-[var(--color-green)]/[0.03] border-2 border-[var(--color-green)]/20 hover:bg-[var(--color-green)]/[0.08] hover:border-[var(--color-green)]/40 text-[var(--color-green)]/70 hover:text-[var(--color-green)] transition-all group mt-1"
+        >
+          <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
+          <span className="text-[11px] font-black uppercase tracking-[0.15em]">Reset Sensor Failure</span>
+        </button>
+
+
       </div>
 
       {/* ── Threshold Slider Tile ── */}

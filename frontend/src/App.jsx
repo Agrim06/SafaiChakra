@@ -386,6 +386,8 @@ export default function App() {
               statuses={statuses}
               trafficStrokeCount={trafficStrokes.length}
               onClearTraffic={() => setTrafficStrokes([])}
+              onSimulateSensorFailure={handleSimulateSensorFailure}
+              onResetSensor={handleResetSensor}
               sensorHealth={sensorHealth}
             />
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
