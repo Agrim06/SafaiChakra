@@ -41,6 +41,58 @@ export default function App() {
   const [sensorHealth, setSensorHealth] = useState(null);
   const [sensorToast, setSensorToast] = useState(null);
   const [sensorToastClosing, setSensorToastClosing] = useState(false);
+
+  // Resizable Sidebar State (Vertical Divider)
+  const [sidebarWidth, setSidebarWidth] = useState(450);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Resizable Bottom State (Horizontal Divider)
+  const [bottomHeight, setBottomHeight] = useState(120);
+  const [isResizingV, setIsResizingV] = useState(false);
+
+  const startResizing = useCallback(() => setIsResizing(true), []);
+  const stopResizing = useCallback(() => setIsResizing(false), []);
+
+  const startResizingV = useCallback(() => setIsResizingV(true), []);
+  const stopResizingV = useCallback(() => setIsResizingV(false), []);
+
+  const resize = useCallback((e) => {
+    if (isResizing) {
+      const newWidth = e.clientX - 32; 
+      if (newWidth > 300 && newWidth < window.innerWidth * 0.5) {
+        setSidebarWidth(newWidth);
+      }
+    }
+    if (isResizingV) {
+      const newHeight = window.innerHeight - e.clientY - 32;
+      if (newHeight > 60 && newHeight < window.innerHeight * 0.4) {
+        setBottomHeight(newHeight);
+      }
+    }
+  }, [isResizing, isResizingV]);
+
+  useEffect(() => {
+    const onMouseUp = () => {
+      stopResizing();
+      stopResizingV();
+    };
+
+    if (isResizing || isResizingV) {
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = isResizing ? "col-resize" : "row-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isResizing, isResizingV, resize, stopResizing, stopResizingV]);
   // 1. Fetch all known bins
   const fetchAllBins = useCallback(async () => {
     try {
@@ -243,7 +295,7 @@ export default function App() {
           <AnalyticsPage routeData={routeData} />
         </div>
       )}
-      
+
 
       <main className={`flex-1 overflow-hidden px-8 py-6 flex flex-col mt-16 slide-in ${page !== "dashboard" ? "hidden" : ""}`}>
         {error && (
@@ -309,8 +361,12 @@ export default function App() {
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
-          <section className="xl:col-span-4 h-full overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+        <div className="flex-1 overflow-hidden flex gap-0 items-stretch relative">
+          {/* 1. Left Sidebar (Resizable) */}
+          <section 
+            className="h-full overflow-y-auto space-y-6 pr-4 custom-scrollbar shrink-0"
+            style={{ width: `${sidebarWidth}px` }}
+          >
             <BinCard status={activeStatus} loading={loading} threshold={threshold} sensorDiag={activeSensorDiag} />
             <ControlPanel
               onRefresh={() => fetchData()}
@@ -330,8 +386,6 @@ export default function App() {
               statuses={statuses}
               trafficStrokeCount={trafficStrokes.length}
               onClearTraffic={() => setTrafficStrokes([])}
-              onSimulateSensorFailure={handleSimulateSensorFailure}
-              onResetSensor={handleResetSensor}
               sensorHealth={sensorHealth}
             />
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
@@ -344,7 +398,14 @@ export default function App() {
             </footer>
           </section>
 
-          <section className="xl:col-span-8 flex flex-col gap-5 h-full overflow-hidden">
+          {/* 2. Drag Divider */}
+          <div 
+            onMouseDown={startResizing}
+            className={`group w-1 hover:bg-[var(--color-green)]/20 cursor-col-resize transition-all flex items-center justify-center relative z-[1010] mx-1 ${isResizing ? 'bg-[var(--color-green)]/30 w-1.5' : 'bg-transparent'}`}
+          />
+
+          {/* 3. Right Map Section */}
+          <section className="flex-1 flex flex-col gap-0 h-full overflow-hidden min-w-0">
             <div className="flex-1 relative min-h-0">
               <MapView
                 route={route}
@@ -358,9 +419,17 @@ export default function App() {
                 drawTrafficEnabled={drawTrafficEnabled}
                 onToggleDrawTraffic={() => setDrawTrafficEnabled((v) => !v)}
                 onAddTrafficStroke={addTrafficStroke}
+                onClearTraffic={() => setTrafficStrokes([])}
               />
             </div>
-            <div className="shrink-0">
+
+            {/* Horizontal Drag Divider */}
+            <div 
+              onMouseDown={startResizingV}
+              className={`h-1.5 hover:h-2 hover:bg-[var(--color-green)]/30 cursor-row-resize transition-all relative z-[1010] my-1 ${isResizingV ? 'bg-[var(--color-green)]/40 h-2' : 'bg-transparent'}`}
+            />
+
+            <div className="shrink-0" style={{ height: `${bottomHeight}px` }}>
               <SavingsCard routeData={routeData} />
             </div>
           </section>

@@ -9,9 +9,9 @@ export default function ControlPanel({
   showPredictiveMap, onTogglePredict,
   allBins, activeBin, setActiveBin, statuses,
   trafficStrokeCount = 0,
-  onClearTraffic = () => {},
-  onSimulateSensorFailure = () => {},
-  onResetSensor = () => {},
+  onClearTraffic = () => { },
+  onSimulateSensorFailure = () => { },
+  onResetSensor = () => { },
   sensorHealth = null,
 }) {
   const pct = threshold;
@@ -89,7 +89,7 @@ export default function ControlPanel({
           <span className="text-[9px] font-black bg-[var(--color-green)] text-[var(--color-bg)] px-2 py-0.5 rounded leading-none">OR-TOOLS</span>
         </button>
 
-        {/* Alert Button */}
+        {/* Manual Emergency Trigger */}
         <button
           onClick={onSimulateAlert}
           className="active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-[var(--color-red)] hover:border-[var(--color-red)]/30 hover:bg-[var(--color-red)]/5 group shadow-sm"
@@ -102,8 +102,8 @@ export default function ControlPanel({
         <button
           onClick={onTogglePredict}
           className={`active:scale-[0.98] transition-all flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-sm ${showPredictiveMap
-              ? "bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/40 text-[var(--color-cyan)]"
-              : "bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg)]/80"
+            ? "bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/40 text-[var(--color-cyan)]"
+            : "bg-[var(--color-bg)] border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg)]/80"
             } group`}
         >
           <span className={`text-[14px] ${showPredictiveMap ? 'animate-bounce' : ''}`}>⚡</span>
@@ -111,16 +111,6 @@ export default function ControlPanel({
             {showPredictiveMap ? "AI Active" : "Predict Spillover"}
           </span>
           {showPredictiveMap && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
-        </button>
-
-        {/* ── Sensor Reset ── */}
-        <button
-          onClick={onResetSensor}
-          className="active:scale-[0.98] transition-all flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-[var(--color-bg)] border-2 border-[var(--color-card-border)] text-[var(--color-text-dim)] hover:text-[var(--color-green)] hover:border-[var(--color-green)]/30 hover:bg-[var(--color-green)]/5 group shadow-sm"
-          title="Restore sensor to healthy"
-        >
-          <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
-          <span className="text-[12px] font-black uppercase tracking-[0.1em]">Reset Bin Recovery</span>
         </button>
 
       </div>

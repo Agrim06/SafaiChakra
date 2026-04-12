@@ -10,7 +10,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Maximize2, X, Navigation, LocateFixed, Brush } from "lucide-react";
+import { Maximize2, X, Navigation, LocateFixed, Brush, Trash2 } from "lucide-react";
 
 // Fix for default Leaflet icon paths in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -59,13 +59,11 @@ const makePinIcon = (status, threshold, sensorStatus) => {
 
   const color = isFailed
     ? "#000000" // Black for failed sensor
-    : isBin01
-      ? "#ff4500" // Orangered for fire bin
-      : isCritical
-        ? "var(--color-red)"
-        : isWarning
-          ? "#eab308"
-          : "var(--color-green)";
+    : isCritical
+      ? "var(--color-red)"
+      : isWarning
+        ? "#eab308"
+        : "var(--color-green)";
 
   return L.divIcon({
     className: "",
@@ -74,8 +72,8 @@ const makePinIcon = (status, threshold, sensorStatus) => {
         
         <!-- HEAD -->
         <div style="
-          width:${isBin01 ? '26px' : '16px'};
-          height:${isBin01 ? '26px' : '16px'};
+          width:${isBin01 ? '24px' : '16px'};
+          height:${isBin01 ? '24px' : '16px'};
           border-radius:50%;
           background:${color};
           box-shadow:0 0 20px ${color}AA;
@@ -87,9 +85,7 @@ const makePinIcon = (status, threshold, sensorStatus) => {
           justify-content:center;
         ">
           ${isBin01 ? `
-            <svg viewBox="0 0 24 24" width="16" height="16" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3 0-1.22.5-2 1-2 1.25 0 2.5 1.5 2.5 2.5 0 .25 0 .5-.07.75.53-.25 1.07-.33 1.57-.33 1.1 0 2.5 1.5 2.5 2.5 0 2.5-2.5 5-5 5-3.14 0-5-2-5-5 0-1.5 1-3.5 2.5-5.5 0 2 1 3 1.5 4.5z"></path>
-            </svg>
+            <span style="color:white; font-size:18px; font-weight:200; font-family: 'Inter', sans-serif;">v</span>
           ` : ''}
           ${isFailed
         ? `<div style="
@@ -595,6 +591,7 @@ export default function MapView({
   drawTrafficEnabled = false,
   onToggleDrawTraffic = () => { },
   onAddTrafficStroke,
+  onClearTraffic = () => { },
 }) {
   const [expanded, setExpanded] = useState(false);
   const [roadPath, setRoadPath] = useState(null);
@@ -672,6 +669,20 @@ export default function MapView({
             <Navigation size={12} className="animate-pulse" />
             Pathing...
           </span>
+        )}
+
+        {trafficStrokes.length > 0 && (
+          <button
+            type="button"
+            onClick={onClearTraffic}
+            className="p-1.5 rounded-md transition-all border border-transparent hover:bg-red-500/10 text-slate-400 hover:text-red-400 group flex items-center gap-2 pr-3"
+            title="Clear all traffic data"
+          >
+            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">
+              Clear
+            </span>
+          </button>
         )}
 
         <button

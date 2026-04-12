@@ -101,7 +101,7 @@ def _diagnose_single_bin(
     return {
         "bin_id": latest.bin_id,
         "severity": FAILURE if latest.sensor_status else severity,
-        "issues": ["Manual sensor failure injected"] if latest.sensor_status else issues,
+        "issues": ["Service Needed!"] if latest.sensor_status else issues,
         "fill_pct": latest.fill_pct,
         "distance_cm": latest.distance_cm,
         "latitude": latest.latitude,
