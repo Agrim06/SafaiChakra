@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
@@ -31,7 +31,7 @@
        * Detects saved preference and applies the data-theme attribute 
        * to prevent flash of unstyled content (FOUC).
        */
-      const savedTheme = localStorage.getItem('safai-theme') || 'dark';
+      const savedTheme = localStorage.getItem('safai-theme') || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
   </head>

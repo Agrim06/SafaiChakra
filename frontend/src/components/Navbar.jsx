@@ -2,7 +2,7 @@ import { Leaf, Activity, Sun, Moon, BarChart2, LayoutDashboard } from "lucide-re
 import { useState } from "react";
 
 export default function Navbar({ lastUpdated, isLive, page, setPage }) {
-  const [theme, setTheme] = useState(document.documentElement.getAttribute("data-theme") || "dark");
+  const [theme, setTheme] = useState(document.documentElement.getAttribute("data-theme") || "light");
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
