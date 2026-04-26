@@ -61,3 +61,7 @@ def root():
 def health():
     """Lightweight liveness probe used by uptime monitors."""
     return {"status": "ok"}
+
+@app.get("/ping")
+def ping():
+    return {"status": "ok", "message": "SafaiChakra is awake!"}

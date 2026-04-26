@@ -173,7 +173,6 @@ export default function AnalyticsPage({ routeData }) {
   const pct = totals.tradFuel > 0 ? ((totals.savedFuel / totals.tradFuel) * 100).toFixed(1) : 0;
 
   const ChartComponent = chartType === "area" ? AreaChart : BarChart;
-  const DataComponent_T = chartType === "area" ? Area : Bar;
 
   const commonAxisProps = {
     xAxis: <XAxis dataKey="month" tick={CHART_STYLE.tick} axisLine={false} tickLine={false} />,

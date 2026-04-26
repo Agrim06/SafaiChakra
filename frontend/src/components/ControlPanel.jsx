@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { RefreshCw, Route, Flame, AlertTriangle, ChevronDown, Zap } from "lucide-react";
 
 export default function ControlPanel({
@@ -17,9 +16,6 @@ export default function ControlPanel({
   const pct = threshold;
   const fillPos = ((pct - 30) / (90 - 30)) * 100;
   const fillColor = pct >= 70 ? "var(--color-red)" : pct >= 50 ? "var(--color-amber)" : "var(--color-green)";
-
-  // Sensor health summary counts
-  const healthSummary = sensorHealth?.summary;
 
   return (
     <div className="glass-panel p-4 slide-in flex flex-col gap-4 border-[var(--color-card-border)] relative overflow-hidden">

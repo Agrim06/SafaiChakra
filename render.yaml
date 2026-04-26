@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: safaichakra-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free # Using Free Tier
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Database connection string (You must set this manually in the Render Dashboard!)
+      - key: DATABASE_URL
+        sync: false 
+      # Vercel URL for CORS (e.g., https://your-app.vercel.app)
+      - key: ALLOWED_ORIGINS
+        sync: false 
+      # Supabase SSL config
+      - key: DB_SSL
+        value: "true"

@@ -27,5 +27,5 @@ COPY . .
 # Expose FastAPI port
 EXPOSE 8000
 
-# Run with uvicorn directly (no reload in production container)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run with uvicorn directly, dynamically reading Render's $PORT env var fallback to 8000
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"

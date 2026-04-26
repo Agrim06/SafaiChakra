@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Trash2, Zap, WifiOff, Activity } from "lucide-react";
+import { Trash2, Zap, WifiOff } from "lucide-react";
 
 function FillGauge({ pct, threshold }) {
   const isCritical = pct >= threshold;
@@ -6,7 +6,6 @@ function FillGauge({ pct, threshold }) {
   
   // Using theme-aware deep accents for soothing mode
   const color = isCritical ? "var(--color-red)" : isWarning ? "var(--color-amber)" : "var(--color-green)";
-  const shadow = `0 4px 12px ${color}33`;
 
   return (
     <div className="flex flex-col items-center gap-1.5 mt-0.5">
@@ -66,16 +65,14 @@ export default function BinCard({ status, loading, threshold = 70, sensorDiag = 
     );
   }
 
-  const { bin_id, fill_pct, is_alert, message, created_at } = status;
+  const { bin_id, fill_pct, is_alert, message } = status;
   const isCritical = is_alert || fill_pct >= threshold;
   const isWarning = !isCritical && fill_pct >= threshold - 30;
-  const label = isCritical ? "CRITICAL" : isWarning ? "WARNING" : "OPERATIONAL";
   const accentColor = isCritical ? "var(--color-red)" : isWarning ? "var(--color-amber)" : "var(--color-green)";
 
   // Sensor health
   const sensorFailed = sensorDiag && sensorDiag.severity === "FAILURE";
   const sensorWarn   = sensorDiag && sensorDiag.severity === "WARNING";
-  const sensorOk     = sensorDiag && sensorDiag.severity === "OK";
   const sensorColor = sensorFailed ? "var(--color-red)" : sensorWarn ? "var(--color-amber)" : "var(--color-green)";
   const sensorLabel = sensorFailed ? "FAULT" : sensorWarn ? "WARN" : "OK";
 
