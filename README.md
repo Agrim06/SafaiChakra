@@ -20,22 +20,22 @@ The name "SafaiChakra" reflects our mission to create a sustainable, efficient, 
 ## 🛠️ Tech Stack
 
 ### **Frontend**
-- **Core**: React.js, Vite
+- **Core**: React.js (Create React App)
 - **Mapping**: Leaflet / React-Leaflet
 - **Styling**: Vanilla CSS (Premium Aesthetics), TailwindCSS
-- **State Management**: React Hooks & Context API
+- **State Management**: React Hooks
 
 ### **Backend**
 - **Framework**: FastAPI (Python)
 - **Database**: PostgreSQL (SQLAlchemy ORM)
 - **Optimization Engine**: Google OR-Tools
 - **Routing API**: OSRM (Open Source Routing Machine)
-- **Environment**: Docker & Docker Compose
 
 ### **Hardware / IoT**
-- **Controller**: ESP-series (ESP8266/ESP32)
+- **Controller**: ESP8266 (NodeMCU)
 - **Sensors**: Ultrasonic (HC-SR04) for depth measurement
-- **Communication**: MQTT/HTTP (JSON payloads)
+- **Display**: SSD1306 OLED via I2C
+- **Communication**: HTTP POST (JSON payloads)
 
 ---
 
@@ -44,41 +44,106 @@ The name "SafaiChakra" reflects our mission to create a sustainable, efficient, 
 ```bash
 SafaiChakra/
 ├── backend/          # FastAPI server, OR-Tools optimization, DB models
-├── frontend/         # React application (Vite-powered)
-├── esp_code/         # MicroPython/Arduino code for IoT sensors
-├── docker-compose.yml # Orchestration for local development
-└── .env.example      # Environment variable templates
+├── frontend/         # React application
+├── esp_code/         # Arduino code for ESP8266 IoT sensors
+└── README.md         # Project documentation
 ```
 
 ---
 
-## ⚙️ Getting Started
+## ⚙️ Getting Started (Software)
 
 ### Prerequisites
-- Docker & Docker Compose
-- Node.js (for manual frontend dev)
-- Python 3.9+ (for manual backend dev)
+- Node.js (v16+)
+- Python (3.9+)
+- PostgreSQL Server
 
-### Installation
+### 1. Backend Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Agrim06/SafaiChakra.git
-   cd SafaiChakra
+The backend handles the REST API, database connections, and route optimization.
+
+```bash
+cd backend
+
+# Create a virtual environment (optional but recommended)
+python -m venv venv
+# Activate it:
+# Windows: venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the server
+python run.py
+```
+*The API will be available at `http://localhost:8000` with interactive docs at `http://localhost:8000/docs`.*
+
+### 2. Frontend Setup
+
+The frontend provides the Mission Control dashboard.
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm start
+```
+*The dashboard will automatically open at `http://localhost:3000`.*
+
+---
+
+## 🔌 Hardware Setup (Smart Bin Node)
+
+The IoT node uses an ESP8266 to measure the bin's fill level using an Ultrasonic sensor and displays the status on a local OLED screen.
+
+### Components Needed
+- ESP8266 / NodeMCU Board
+- HC-SR04 Ultrasonic Sensor
+- SSD1306 128x64 I2C OLED Display
+- Push Button (for calibration)
+- Jumper wires & breadboard
+
+### Wiring Guide
+
+| Component | Pin | ESP8266 Pin | Notes |
+| :--- | :--- | :--- | :--- |
+| **Ultrasonic (HC-SR04)** | VCC | `Vin` / `3.3V` | Use 5V if 3.3V isn't sufficient |
+| | GND | `GND` | |
+| | TRIG | **`D5`** | Changed from D1 to avoid I2C conflict |
+| | ECHO | **`D6`** | Changed from D2 to avoid I2C conflict |
+| **OLED Display (I2C)** | VCC | `3.3V` | |
+| | GND | `GND` | |
+| | SCL | **`D1`** | Standard hardware I2C |
+| | SDA | **`D2`** | Standard hardware I2C |
+| **Calibration Button** | Pin 1 | **`D3`** | Uses internal pull-up |
+| | Pin 2 | `GND` | |
+
+### Firmware Flashing
+
+1. Install the [Arduino IDE](https://www.arduino.cc/en/software).
+2. Add ESP8266 support to the Board Manager (Add `http://arduino.esp8266.com/stable/package_esp8266com_index.json` to preferences).
+3. Install required libraries via the Library Manager (`Sketch` -> `Include Library` -> `Manage Libraries`):
+   - **`ArduinoJson`** by Benoit Blanchon
+   - **`U8g2`** by oliver
+4. Open the code at `esp_code/smartBin.ino`.
+5. Update your WiFi credentials and your backend IP address in the code:
+   ```cpp
+   const char *WIFI_SSID = "YOUR_WIFI_SSID";
+   const char *WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+   // Use your computer's local IP address (e.g., 192.168.x.x)
+   const char *SERVER_URL = "http://<YOUR_BACKEND_IP>:8000/bin/update"; 
    ```
+6. Select your ESP8266 board and Port from the `Tools` menu, and hit **Upload**.
 
-2. **Setup Environment**
-   Create `.env` files in both `frontend` and `backend` directories based on the provided examples.
-
-3. **Run with Docker**
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Access the App**
-   - **Frontend**: [http://localhost:5173](http://localhost:5173)
-   - **Backend API**: [http://localhost:8000](http://localhost:8000)
-   - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+### Hardware Calibration
+Once the device powers on and connects to WiFi:
+1. Ensure the bin is **completely empty**.
+2. Press the physical calibration button connected to **D3** (or type `cal` in the Arduino Serial Monitor).
+3. The sensor will take a few readings to determine the total depth of the bin automatically!
 
 ---
 
@@ -86,7 +151,7 @@ SafaiChakra/
 
 SafaiChakra's dashboard provides a "War Room" experience for city administrators:
 - **Map View**: Live markers showing bin capacity (Green -> Red).
-- **Optimization Toggle**: Run the OR-Tools solver to reroute trucks based on demand.
+- **Optimization Toggle**: Run the OR-Tools solver to reroute trucks based on real-time demand.
 - **Logistics Metrics**: Track efficiency, fuel savings, and average bin fill time.
 
 ---
@@ -107,4 +172,4 @@ We welcome contributions! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-Developed with ❤️ for a cleaner future.
+Developed with ❤️ for a cleaner, greener future.
