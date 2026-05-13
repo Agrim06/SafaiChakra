@@ -12,7 +12,7 @@ import AnalyticsPage from "./components/AnalyticsPage";
 
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS = 300000
+const POLL_MS = 3000; // Reduced from 300000 (5 mins) to 5 seconds for testing
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -58,7 +58,7 @@ export default function App() {
 
   const resize = useCallback((e) => {
     if (isResizing) {
-      const newWidth = e.clientX - 32; 
+      const newWidth = e.clientX - 32;
       if (newWidth > 300 && newWidth < window.innerWidth * 0.5) {
         setSidebarWidth(newWidth);
       }
@@ -363,7 +363,7 @@ export default function App() {
 
         <div className="flex-1 overflow-hidden flex gap-0 items-stretch relative">
           {/* 1. Left Sidebar (Resizable) */}
-          <section 
+          <section
             className="h-full overflow-y-auto space-y-6 pr-4 custom-scrollbar shrink-0"
             style={{ width: `${sidebarWidth}px` }}
           >
@@ -401,7 +401,7 @@ export default function App() {
           </section>
 
           {/* 2. Drag Divider */}
-          <div 
+          <div
             onMouseDown={startResizing}
             className={`group w-1 hover:bg-[var(--color-green)]/20 cursor-col-resize transition-all flex items-center justify-center relative z-[1010] mx-1 ${isResizing ? 'bg-[var(--color-green)]/30 w-1.5' : 'bg-transparent'}`}
           />
@@ -426,7 +426,7 @@ export default function App() {
             </div>
 
             {/* Horizontal Drag Divider */}
-            <div 
+            <div
               onMouseDown={startResizingV}
               className={`h-1.5 hover:h-2 hover:bg-[var(--color-green)]/30 cursor-row-resize transition-all relative z-[1010] my-1 ${isResizingV ? 'bg-[var(--color-green)]/40 h-2' : 'bg-transparent'}`}
             />

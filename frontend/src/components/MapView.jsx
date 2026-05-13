@@ -85,7 +85,7 @@ const makePinIcon = (status, threshold, sensorStatus) => {
           justify-content:center;
         ">
           ${isBin01 ? `
-            <span style="color:white; font-size:18px; font-weight:200; font-family: 'Inter', sans-serif;">v</span>
+            <span style="color:white; font-size:8px; font-weight:800; font-family: 'Inter', sans-serif;">LIVE</span>
           ` : ''}
           ${isFailed
         ? `<div style="
