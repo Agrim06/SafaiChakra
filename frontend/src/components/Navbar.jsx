@@ -12,8 +12,8 @@ export default function Navbar({ lastUpdated, isLive, page, setPage }) {
   };
 
   const tabs = [
-    { id: "dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
-    { id: "analytics",  label: "Analytics",  Icon: BarChart2 },
+    { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
+    { id: "analytics", label: "Analytics", Icon: BarChart2 },
   ];
 
   return (
@@ -25,17 +25,16 @@ export default function Navbar({ lastUpdated, isLive, page, setPage }) {
 
         {/* Logo */}
         <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center group transition-all ${
-            theme === 'light'
-              ? 'bg-[var(--color-bg)] border-2 border-[var(--color-green)] shadow-sm'
-              : 'bg-[var(--color-green)]/10 border-2 border-[var(--color-green)]/20 hover:bg-[var(--color-green)]/20'
-          }`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center group transition-all ${theme === 'light'
+            ? 'bg-[var(--color-bg)] border-2 border-[var(--color-green)] shadow-sm'
+            : 'bg-[var(--color-green)]/10 border-2 border-[var(--color-green)]/20 hover:bg-[var(--color-green)]/20'
+            }`}>
             <Leaf size={18} className={`transition-transform group-hover:scale-110 ${theme === 'light' ? 'text-[var(--color-green)] fill-[var(--color-bg)]' : 'text-[var(--color-green)]'}`} />
           </div>
           <div className="flex flex-col">
             <div className="flex items-baseline leading-none">
-              <span className="text-[22px] font-black tracking-tight text-[var(--color-text)]">Safai</span>
-              <span className="text-[22px] font-black tracking-tight text-[var(--color-green)]">Chakra</span>
+              <span className="text-[22px] font-black tracking-tight text-[var(--color-text)]">Swach</span>
+              <span className="text-[22px] font-black tracking-tight text-[var(--color-green)]">Setu</span>
             </div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-text-dim)] mt-0.5">Operations Center V3.5.1</p>
           </div>
