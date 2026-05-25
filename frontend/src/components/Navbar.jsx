@@ -33,8 +33,8 @@ export default function Navbar({ lastUpdated, isLive, page, setPage }) {
           </div>
           <div className="flex flex-col">
             <div className="flex items-baseline leading-none">
-              <span className="text-[22px] font-black tracking-tight text-[var(--color-text)]">Swach</span>
-              <span className="text-[22px] font-black tracking-tight text-[var(--color-green)]">Setu</span>
+              <span className="text-[22px] font-black tracking-tight text-[var(--color-text)]">Safai</span>
+              <span className="text-[22px] font-black tracking-tight text-[var(--color-green)]">Chakra</span>
             </div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-text-dim)] mt-0.5">Operations Center V3.5.1</p>
           </div>
