@@ -145,7 +145,7 @@ def compute_route(
     if depots:
         depot_lat, depot_lon = depots[0].latitude, depots[0].longitude
     else:
-        depot_lat, depot_lon = 12.2764, 76.6666
+        depot_lat, depot_lon = 12.2730, 76.6200
 
     # ── 1. Full Scale Schedule (Baseline: Traditional way) ──
     # Visiting EVERY bin in natural order using the SAME distance logic as optimized.

@@ -420,7 +420,7 @@ function MapCanvas({
   onAddTrafficStroke,
   sensorHealth,
 }) {
-  const center = locations["DEPOT_00"] || [12.3106, 76.6450];
+  const center = locations["DEPOT_00"] || [12.2730, 76.6200];
 
   // Dynamic Map URL based on theme
   const tileUrl = isLight
