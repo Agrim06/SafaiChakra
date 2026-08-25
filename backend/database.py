@@ -32,11 +32,11 @@ engine_kwargs = {
     "connect_args": connect_args,
 }
 
-if _is_transaction_pooler:
-    # Transaction mode works best with NullPool to avoid double-pooling issues
+# For Supabase / cloud poolers, NullPool prevents connection exhaustion & stale SSL sockets
+if _use_ssl or _is_transaction_pooler or "supabase" in DATABASE_URL:
     engine_kwargs["poolclass"] = NullPool
 else:
-    # Standard / Session pooler - recycle connections every 300s and test before use
+    # Standard local Postgres pooling
     engine_kwargs.update({
         "pool_pre_ping": True,
         "pool_recycle": 300,

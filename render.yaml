@@ -8,6 +8,8 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
+      - key: PORT
+        value: 10000
       # Database connection string (You must set this manually in the Render Dashboard!)
       - key: DATABASE_URL
         sync: false 
