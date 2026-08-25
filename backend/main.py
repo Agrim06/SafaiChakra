@@ -20,7 +20,7 @@ from routers.feedback      import router as feedback_router
 # ── App factory ─────────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title       = "SafaiChakra API",
+    title       = "SwachSetu API",
     description = (
         "Smart waste management backend. "
         "Receives IoT bin readings, stores them in PostgreSQL, "
