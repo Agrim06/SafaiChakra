@@ -12,7 +12,7 @@ import AnalyticsPage from "./components/AnalyticsPage";
 
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS = 30000; // Reduced from 300000 (5 mins) to 5 seconds for testing
+const POLL_MS = 3000; // Reduced from 300000 (5 mins) to 5 seconds for testing
 
 export default function App() {
   const [page, setPage] = useState("dashboard");

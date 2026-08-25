@@ -5,15 +5,14 @@
 #include <Wire.h>
 
 // ── WiFi + Server Config ────────────────────────────────
-const char *WIFI_SSID = "SSIID";
-const char *WIFI_PASSWORD = "Password";
-const char *SERVER_URL = "http://<server>:8000/bin/update";
+const char *WIFI_SSID = ".....";
+const char *WIFI_PASSWORD = ".....";
+const char *SERVER_URL = "http://172.21.32.81:8000/bin/update";
 
 // ── Bin Config ──────────────────────────────────────────
 const char *BIN_ID = "BIN_01";
 float BIN_HEIGHT_CM = 40.0; // Dynamic after calibration
 
-// ── Timing Config ───────────────────────────────────────
 const int READ_INTERVAL = 2000; // Read every 2 sec
 const int SEND_INTERVAL = 5000; // Send every 5 sec
 
