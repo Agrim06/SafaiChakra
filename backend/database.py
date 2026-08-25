@@ -13,11 +13,19 @@ if not DATABASE_URL:
 # Supabase requires SSL; local Postgres does not — we detect context via URL
 _use_ssl = "supabase" in DATABASE_URL or os.getenv("DB_SSL", "false").lower() == "true"
 
-connect_args = {"sslmode": "require"} if _use_ssl else {}
+connect_args = {}
+if _use_ssl:
+    connect_args.update({
+        "sslmode": "require",
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    })
 
 from sqlalchemy.pool import NullPool
 
-# Detect if we are using the transaction pooler (port 6543)
+# Detect if we are using the transaction pooler (port 6543) or direct/session pooler
 _is_transaction_pooler = ":6543" in DATABASE_URL
 
 engine_kwargs = {
@@ -28,11 +36,13 @@ if _is_transaction_pooler:
     # Transaction mode works best with NullPool to avoid double-pooling issues
     engine_kwargs["poolclass"] = NullPool
 else:
-    # Standard mode (Session or direct) - use SQLAlchemy's pool
+    # Standard / Session pooler - recycle connections every 300s and test before use
     engine_kwargs.update({
         "pool_pre_ping": True,
+        "pool_recycle": 300,
         "pool_size": 5,
         "max_overflow": 10,
+        "pool_timeout": 30,
     })
 
 engine = create_engine(DATABASE_URL, **engine_kwargs)
