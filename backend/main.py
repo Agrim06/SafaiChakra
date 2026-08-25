@@ -44,7 +44,12 @@ app.add_middleware(
 )
 
 # ── Database bootstrap ───────────────────────────────────────────────────────
-models.Base.metadata.create_all(bind=engine)
+@app.on_event("startup")
+def init_db():
+    try:
+        models.Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"[WARN] Database initialization warning: {e}")
 # ── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(bin_router)
 app.include_router(route_router)
