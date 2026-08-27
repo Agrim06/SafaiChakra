@@ -12,7 +12,7 @@ import AnalyticsPage from "./components/AnalyticsPage";
 
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS = 3000; // Reduced from 300000 (5 mins) to 5 seconds for testing
+const POLL_MS = 30000; // Reduced from 300000 (5 mins) to 5 seconds for testing
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -47,7 +47,7 @@ export default function App() {
   const [isResizing, setIsResizing] = useState(false);
 
   // Resizable Bottom State (Horizontal Divider)
-  const [bottomHeight, setBottomHeight] = useState(120);
+  const [bottomHeight, setBottomHeight] = useState(210);
   const [isResizingV, setIsResizingV] = useState(false);
 
   const startResizing = useCallback(() => setIsResizing(true), []);
@@ -65,7 +65,7 @@ export default function App() {
     }
     if (isResizingV) {
       const newHeight = window.innerHeight - e.clientY - 32;
-      if (newHeight > 60 && newHeight < window.innerHeight * 0.4) {
+      if (newHeight > 120 && newHeight < window.innerHeight * 0.5) {
         setBottomHeight(newHeight);
       }
     }
@@ -299,7 +299,7 @@ export default function App() {
         </div>
       )}
 
-      <main className={`flex-1 overflow-hidden px-3 py-2 sm:px-6 sm:py-4 lg:px-8 lg:py-6 flex flex-col mt-14 sm:mt-16 slide-in ${page !== "dashboard" ? "hidden" : ""}`}>
+      <main className={`flex-1 overflow-hidden px-3 py-2 sm:px-4 sm:py-3 lg:px-6 lg:py-3 flex flex-col mt-14 sm:mt-16 slide-in ${page !== "dashboard" ? "hidden" : ""}`}>
         {error && (
           <div className="glass-panel border-red-500/20 bg-red-500/5 mb-3 sm:mb-4 px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -392,8 +392,8 @@ export default function App() {
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row gap-0 items-stretch relative">
           {/* 1. Left Sidebar (Controls & Nodes) */}
           <section
-            className={`h-full overflow-y-auto space-y-4 sm:space-y-6 pr-0 lg:pr-4 custom-scrollbar shrink-0 w-full lg:w-auto ${
-              mobileTab === "controls" ? "flex flex-col" : "hidden lg:flex lg:flex-col"
+            className={`h-full overflow-y-auto flex flex-col gap-3.5 sm:gap-4 pr-0 lg:pr-3 custom-scrollbar shrink-0 w-full lg:w-auto ${
+              mobileTab === "controls" ? "flex" : "hidden lg:flex"
             }`}
             style={{ width: window.innerWidth >= 1024 ? `${sidebarWidth}px` : "100%" }}
           >
@@ -422,10 +422,10 @@ export default function App() {
             />
             <AgentPanel route={route} optimizing={optimizing} status={activeStatus} />
 
-            <footer className="pb-6 border-t border-[var(--color-card-border)] pt-4 sm:pt-6 flex flex-col items-center gap-3">
-              <div className="text-center space-y-1">
-                <p className="text-[9px] uppercase tracking-[0.4em] text-[var(--color-text-dim)] font-black">SafaiChakra Intelligence System</p>
-                <p className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest leading-relaxed">Smart Waste Collection Route Optimizer<br />© {new Date().getFullYear()}</p>
+            <footer className="pb-4 border-t border-[var(--color-card-border)] pt-3 flex flex-col items-center gap-1.5 shrink-0">
+              <div className="text-center space-y-0.5">
+                <p className="text-[9px] uppercase tracking-[0.3em] text-[var(--color-text-dim)] font-black">SafaiChakra Intelligence System</p>
+                <p className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest leading-relaxed">Smart Waste Collection Route Optimizer • © {new Date().getFullYear()}</p>
               </div>
             </footer>
           </section>
@@ -440,7 +440,7 @@ export default function App() {
           <section className={`flex-1 flex flex-col gap-0 h-full overflow-hidden min-w-0 w-full ${
             mobileTab === "map" ? "flex" : "hidden lg:flex"
           }`}>
-            <div className="flex-1 relative min-h-[260px]">
+            <div className="flex-1 relative min-h-[240px]">
               <MapView
                 route={route}
                 optimizing={optimizing}
@@ -463,7 +463,7 @@ export default function App() {
               className={`hidden lg:block h-1.5 hover:h-2 hover:bg-[var(--color-green)]/30 cursor-row-resize transition-all relative z-[1010] my-1 ${isResizingV ? 'bg-[var(--color-green)]/40 h-2' : 'bg-transparent'}`}
             />
 
-            <div className="shrink-0 overflow-y-auto custom-scrollbar mt-2 sm:mt-0" style={{ height: window.innerWidth >= 1024 ? `${bottomHeight}px` : "auto", maxHeight: "40vh" }}>
+            <div className="shrink-0 overflow-y-auto custom-scrollbar mt-1.5 sm:mt-0" style={{ height: window.innerWidth >= 1024 ? `${bottomHeight}px` : "auto", minHeight: "170px", maxHeight: "48vh" }}>
               <SavingsCard routeData={routeData} />
             </div>
           </section>
