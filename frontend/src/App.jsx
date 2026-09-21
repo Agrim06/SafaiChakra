@@ -30,7 +30,7 @@ export default function App() {
   const [toastHidden, setToastHidden] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
-  // Hackathon AI Feature
+  // Prediction Feature
   const [showPredictiveMap, setShowPredictiveMap] = useState(false);
   const [predictiveData, setPredictiveData] = useState(null);
 

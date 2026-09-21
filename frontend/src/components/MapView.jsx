@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+
 import { createPortal } from "react-dom";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  Polyline,
-  CircleMarker,
-  useMap,
-} from "react-leaflet";
+import {MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap} from "react-leaflet";
 import L from "leaflet";
 import { Maximize2, X, Navigation, LocateFixed, Brush, Trash2 } from "lucide-react";
 
@@ -423,9 +416,16 @@ function MapCanvas({
   const center = locations["DEPOT_00"] || [12.2730, 76.6200];
 
   // Dynamic Map URL based on theme
+  
+  const MAP_API_KEY =
+    process.env.REACT_APP_MAP_KEY ||
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_MAP_KEY) ||
+    "cb1_3sgn_1_135015f047821f33d84e08d7";
+
+  const keyParam = MAP_API_KEY ? `?key=${MAP_API_KEY}` : "";
   const tileUrl = isLight
-    ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+    ? `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${keyParam}`
+    : `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${keyParam}`;
 
   return (
     <div className="relative w-full h-full min-h-0">
