@@ -60,32 +60,35 @@ def get_current_system_snapshot():
 
 @router.websocket("/bins")
 async def websocket_bin_endpoint(websocket: WebSocket):
+    print(f"\n[WS SERVER] Incoming handshake from {websocket.client}", flush=True)
     await manager.connect(websocket)
+    print(f"[WS SERVER] Handshake accepted for {websocket.client}", flush=True)
 
     try:
+        print("[WS SERVER] Fetching initial snapshot...", flush=True)
         snapshot = get_current_system_snapshot()
+        print(f"[WS SERVER] Snapshot fetched: {len(snapshot.get('all_bins', []))} bins. Sending to client...", flush=True)
         await manager.send_personal_message(
             {
-                "event" : "INIT SNAPSHOT",
+                "event": "INIT_SNAPSHOT",
                 "data": jsonable_encoder(snapshot),
             },
             websocket,
         )
+        print("[WS SERVER] Snapshot delivered successfully!", flush=True)
 
         while True:
-
             data = await websocket.receive_text()
-
             if data == "ping":
                 await websocket.send_text("pong")
-    
 
     except WebSocketDisconnect:
-        logger.info("Client disconnected")
+        print(f"[WS SERVER] Client disconnected: {websocket.client}", flush=True)
         manager.disconnect(websocket)
-    
-    
     except Exception as e:
-        logger.error(f"WS Error: {e}")
+        print(f"[WS SERVER] Error in websocket loop: {type(e)} {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         manager.disconnect(websocket)
+
 

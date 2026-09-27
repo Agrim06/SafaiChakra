@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const WS_URL = `${API_BASE.replace(/^http/, "ws")}/ws/bins`;
+const rawApiBase = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
+const normalizedBase = rawApiBase.replace("localhost", "127.0.0.1");
+const WS_URL = `${normalizedBase.replace(/^http/, "ws")}/ws/bins`;
 
 export function useBinWebSocket({
   onInitSnapshot,
@@ -25,16 +26,21 @@ export function useBinWebSocket({
   }, [onInitSnapshot, onBinUpdate, onSensorUpdate]);
 
   const connect = useCallback(() => {
-    if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
+    if (
+      socketRef.current &&
+      (socketRef.current.readyState === WebSocket.CONNECTING ||
+        socketRef.current.readyState === WebSocket.OPEN)
+    ) {
       return;
     }
+
 
     console.log("[WebSocket] Connecting to", WS_URL);
     const ws = new WebSocket(WS_URL);
     socketRef.current = ws;
 
     ws.onopen = () => {
-      console.log("[WebSocket] Connection established!");
+      console.log("[WebSocket] Connection established to", WS_URL);
       setIsConnected(true);
       setIsReconnecting(false);
       if (reconnectTimeoutRef.current) {
@@ -46,23 +52,20 @@ export function useBinWebSocket({
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        console.log("[WebSocket] Message received:", payload);
+        console.log("[WebSocket] Message received:", payload.event || payload.type);
 
-        const eventType = (payload.event || payload.type || "").toUpperCase();
+        const rawEvent = payload.event || payload.type || "";
+        const normalized = rawEvent.toUpperCase().replace(/[\s_-]/g, "");
         const data = payload.data || payload;
 
-        if (eventType === "INIT_SNAPSHOT" || eventType === "INITSNAPSHOT") {
+        if (normalized === "INITSNAPSHOT") {
+          console.log("[WebSocket] Dispatching INIT_SNAPSHOT with bins:", data.all_bins?.length);
           onInitRef.current?.(data);
-        } else if (
-          eventType === "BIN_UPDATED" ||
-          eventType === "BIN_UPDATE" ||
-          eventType === "BINUPDATES"
-        ) {
+        } else if (normalized.startsWith("BINUPDATE")) {
+          console.log("[WebSocket] Dispatching BIN_UPDATE for bin:", data.bin_id || data.id);
           onBinRef.current?.(data);
-        } else if (
-          eventType === "SENSOR_UPDATE" ||
-          eventType === "SENSORREADING"
-        ) {
+        } else if (normalized.startsWith("SENSOR")) {
+          console.log("[WebSocket] Dispatching SENSOR_UPDATE:", data);
           onSensorRef.current?.(data);
         }
       } catch (err) {
@@ -71,13 +74,16 @@ export function useBinWebSocket({
     };
 
     ws.onerror = (err) => {
-      console.error("[WebSocket] Error:", err);
+      console.error("[WebSocket] Error on socket:", err);
     };
 
     ws.onclose = (event) => {
       console.log("[WebSocket] Connection closed:", event.code, "Reason:", event.reason);
       setIsConnected(false);
       socketRef.current = null;
+
+      // Do not trigger reconnect timer if explicitly closed by component unmount (code 1000)
+      if (event.code === 1000) return;
 
       setIsReconnecting(true);
       reconnectTimeoutRef.current = setTimeout(() => {
@@ -97,16 +103,26 @@ export function useBinWebSocket({
       }
 
       if (socketRef.current) {
-        socketRef.current.close(1000, "Client disconnected");
+        const s = socketRef.current;
         socketRef.current = null;
+        s.onopen = null;
+        s.onmessage = null;
+        s.onerror = null;
+        s.onclose = null;
+        s.close(1000, "Client disconnected");
       }
     };
   }, [connect]);
 
   const reconnect = useCallback(() => {
     if (socketRef.current) {
-      socketRef.current.close();
+      const s = socketRef.current;
       socketRef.current = null;
+      s.onopen = null;
+      s.onmessage = null;
+      s.onerror = null;
+      s.onclose = null;
+      s.close(1000, "Manual reconnect");
     }
     connect();
   }, [connect]);

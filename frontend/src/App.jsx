@@ -13,7 +13,6 @@ import AnalyticsPage from "./components/AnalyticsPage";
 import { useBinWebSocket } from "./hooks/useBinWebSocket";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
-const POLL_MS = 30000; // Reduced from 300000 (5 mins) to 5 seconds for testing
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -122,11 +121,12 @@ export default function App() {
     setSensorHealth(healthData);
   }, []);
 
-  const { isConnected, isReconnecting, reconnect } = useBinWebSocket({
+  const { isConnected } = useBinWebSocket({
     onInitSnapshot: handleInitSnapshot,
     onBinUpdate: handleBinUpdate,
     onSensorUpdate: handleSensorUpdate,
   });
+
 
   useEffect(() => {
     setIsLive(isConnected);
@@ -174,27 +174,7 @@ export default function App() {
     }
   }, [fetchAllBins, autoRefresh]);
 
-  useEffect(() => {
-    if (isConnected) return; // WebSocket is actively streaming updates
-
-    const controller = new AbortController();
-    fetchData(controller.signal);
-    let intervalId;
-    if (autoRefresh) {
-      intervalId = setInterval(() => fetchData(controller.signal), POLL_MS);
-    }
-    return () => {
-      controller.abort();
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [fetchData, autoRefresh, isConnected]);
-
-  const addTrafficStroke = useCallback((positions) => {
-    if (!positions?.length) return;
-    setTrafficStrokes((prev) => [...prev, positions]);
-  }, []);
-
-  // ── Sensor Health Polling (Fallback if WebSocket disconnected) ──
+  // ── Sensor Health Fetcher ──
   const fetchSensorHealth = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API_BASE}/sensor/health`);
@@ -204,12 +184,18 @@ export default function App() {
     }
   }, []);
 
+  // Initial Load: Fetch once on mount to guarantee instant data display
   useEffect(() => {
-    if (isConnected) return; // Handled by WebSocket
+    fetchData();
     fetchSensorHealth();
-    const id = setInterval(fetchSensorHealth, POLL_MS);
-    return () => clearInterval(id);
-  }, [fetchSensorHealth, isConnected]);
+  }, [fetchData, fetchSensorHealth]);
+
+
+  const addTrafficStroke = useCallback((positions) => {
+    if (!positions?.length) return;
+    setTrafficStrokes((prev) => [...prev, positions]);
+  }, []);
+
 
   const handleSimulateSensorFailure = useCallback(async (scenario) => {
     if (!activeBin) return;
