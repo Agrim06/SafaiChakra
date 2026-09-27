@@ -15,11 +15,14 @@ from database import get_db
 from schemas import BinUpdateRequest, BinUpdateResponse, BinStatusResponse, BinHistoryItem
 from services import bin_service
 
+from services.websocket_manager import manager
+from fastapi.encoders import jsonable_encoder
+
 router = APIRouter(prefix="/bin", tags=["Bins"])
 
 
 @router.post("/update", response_model=BinUpdateResponse, status_code=201)
-def update_bin(payload: BinUpdateRequest, db: Session = Depends(get_db)):
+async def update_bin(payload: BinUpdateRequest, db: Session = Depends(get_db)):
     """
     **Used by ESP8266 devices.**
 
@@ -27,6 +30,24 @@ def update_bin(payload: BinUpdateRequest, db: Session = Depends(get_db)):
     Automatically sets `is_alert = True` when `fill_pct >= ALERT_THRESHOLD`.
     """
     reading = bin_service.create_reading(db, payload)
+
+    updated_bin_data = {
+        "bin_id": reading.bin_id,
+        "fill_pct": reading.fill_pct,
+        "distance_cm": reading.distance_cm,
+        "latitude": reading.latitude,
+        "longitude": reading.longitude,
+        "is_alert": reading.is_alert,
+        "sensor_status": reading.sensor_status,
+        "message": "Collection needed!" if reading.is_alert else "All good.",
+        "created_at": reading.created_at.isoformat() if reading.created_at else None,
+        "spillover_risk": bin_service.calculate_predictive_risk(db, reading.bin_id, reading.fill_pct),
+    }
+
+    await manager.broadcast({
+        "event": "BIN_UPDATED",
+        "data": jsonable_encoder(updated_bin_data),
+    })
     return BinUpdateResponse(
         status   = "ok",
         bin_id   = reading.bin_id,
