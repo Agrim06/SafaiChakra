@@ -10,6 +10,7 @@ import AgentPanel from "./components/AgentPanel";
 import SavingsCard from "./components/SavingsCard";
 import AnalyticsPage from "./components/AnalyticsPage";
 
+import { useBinWebSocket } from "./hooks/useBinWebSocket";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 const POLL_MS = 30000; // Reduced from 300000 (5 mins) to 5 seconds for testing
@@ -93,6 +94,45 @@ export default function App() {
       window.removeEventListener("mouseup", onMouseUp);
     };
   }, [isResizing, isResizingV, resize, stopResizing, stopResizingV]);
+
+  const handleInitSnapshot = useCallback((data) => {
+    const uiBins = (data.all_bins || [])
+      .filter((id) => !id.toLowerCase().includes("depot"))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+    setAllBins(uiBins);
+
+    if (uiBins.length > 0) setActiveBin((prev) => prev ?? uiBins[0]);
+
+    setStatuses(data.statuses || {});
+    if (data.sensor_health) setSensorHealth(data.sensor_health);
+
+    setLoading(false);
+    setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  }, []);
+
+  const handleBinUpdate = useCallback((updatedBin) => {
+    const binId = updatedBin.bin_id || updatedBin.id;
+    if (!binId) return;
+
+    setStatuses((prev) => ({ ...prev, [binId]: updatedBin }));
+    setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  }, []);
+
+  const handleSensorUpdate = useCallback((healthData) => {
+    setSensorHealth(healthData);
+  }, []);
+
+  const { isConnected, isReconnecting, reconnect } = useBinWebSocket({
+    onInitSnapshot: handleInitSnapshot,
+    onBinUpdate: handleBinUpdate,
+    onSensorUpdate: handleSensorUpdate,
+  });
+
+  useEffect(() => {
+    setIsLive(isConnected);
+  }, [isConnected]);
+
+
   // 1. Fetch all known bins
   const fetchAllBins = useCallback(async () => {
     try {
@@ -135,6 +175,8 @@ export default function App() {
   }, [fetchAllBins, autoRefresh]);
 
   useEffect(() => {
+    if (isConnected) return; // WebSocket is actively streaming updates
+
     const controller = new AbortController();
     fetchData(controller.signal);
     let intervalId;
@@ -145,14 +187,14 @@ export default function App() {
       controller.abort();
       if (intervalId) clearInterval(intervalId);
     };
-  }, [fetchData, autoRefresh]);
+  }, [fetchData, autoRefresh, isConnected]);
 
   const addTrafficStroke = useCallback((positions) => {
     if (!positions?.length) return;
     setTrafficStrokes((prev) => [...prev, positions]);
   }, []);
 
-  // ── Sensor Health Polling ──
+  // ── Sensor Health Polling (Fallback if WebSocket disconnected) ──
   const fetchSensorHealth = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API_BASE}/sensor/health`);
@@ -162,12 +204,12 @@ export default function App() {
     }
   }, []);
 
-  // Fetch sensor health alongside main data
   useEffect(() => {
+    if (isConnected) return; // Handled by WebSocket
     fetchSensorHealth();
     const id = setInterval(fetchSensorHealth, POLL_MS);
     return () => clearInterval(id);
-  }, [fetchSensorHealth]);
+  }, [fetchSensorHealth, isConnected]);
 
   const handleSimulateSensorFailure = useCallback(async (scenario) => {
     if (!activeBin) return;
